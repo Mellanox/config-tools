@@ -1,9 +1,13 @@
+#
+# Require environmernt variable BOOST_REGEX_STATIC_LIB,
+# as full path to static library 'libboost_regex.a'
+#
 
 CPP                 = g++
 CPP_FLAG            = -Wextra -Wall -Wno-long-long -pedantic -O2
 CPP_INCLUDE         = -I/usr/include
 CPP_LIBS            = -L/usr/lib
-BOOST_REGEX_STATIC  = $(shell locate libboost_regex.a)
+BOOST_REGEX_STATIC  = $(BOOST_REGEX_STATIC_LIB)
 
 UDEV_DIR_CONF       = /etc/udev
 UDEV_DIR_RULES      = /lib/udev/rules.d

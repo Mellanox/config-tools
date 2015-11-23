@@ -1,0 +1,1762 @@
+#!/bin/bash
+
+#-----------------------------------------------------------------------------------------------------
+mlnx_cmnd="$1"
+mlnx_prm1="$2"
+mlnx_prm2="$3"
+mlnx_prm3="$4"
+mlnx_prm4="$5"
+mlnx_prm5="$6"
+mlnx_prm6="$7"
+
+#-----------------------------------------------------------------------------------------------------
+[ "x$MLNX_DEBUG" == 'x' ] && MLNX_DEBUG=no
+MLNX_DEPLOY_ENABLE_E_IPOIB=yes
+MLNX_E_IPOIB_PRE_START_DELAY=10
+MLNX_DEPLOY_MODE_PORT0=ib
+MLNX_DEPLOY_MODE_PORT1=ib
+MLNX_DEPLOY_VF_NUM=8
+MLNX_POST_DEPLOY_DELAY=5
+
+#-----------------------------------------------------------------------------------------------------
+mlnx_util=`basename "$0"`
+mlnx_config='mellanox-config-tools'
+
+os_is_undefined='Undefined'
+os_is_ubuntu='no'
+os_is_redhat='no'
+os_release=''
+
+ubuntu_current_os_release=`lsb_release -r 2> /dev/null | \
+                              tr '\t' ' ' | \
+                              sed -e 's/^.*elease: *//' \
+                                  -e 's/ *$//'`
+if [ "x$ubuntu_current_os_release" == 'x' ]; then
+  ubuntu_current_os_release=$os_is_undefined
+else
+  os_is_ubuntu='yes'
+  os_release=$ubuntu_current_os_release
+fi
+
+redhat_current_os_release=`cat /etc/redhat-release 2> /dev/null | \
+                              head -1 | \
+                              tr '\t' ' ' | \
+                              tr '[:upper:]' '[:lower:]' | \
+                              egrep '^(centos|redhat|fedora)' | \
+                              sed -e 's/^\( *\)\(centos\|redhat\|fedora\)\(.*release *\)\([0-9]*\)\(.*\)$/redhat_os=\2 \4/' | \
+                              egrep '^redhat_os=' | \
+                              sed -e 's/^redhat_os=//' \
+                                  -e 's/^\(.\)/\u\1/'`
+if [ "x$redhat_current_os_release" == 'x' ]; then
+  redhat_current_os_release=$os_is_undefined
+else
+  os_is_redhat='yes'
+  redhat_os_type=''
+  os_release=''
+  eline=`echo "$redhat_current_os_release" | \
+          tr '[:upper:]' '[:lower:]' | \
+          awk '{printf("redhat_os_type=\"%s\"; os_release=\"%s\";\n", $1, $2);}'`
+  eval "$eline" > /dev/null 2>&1
+  if [ "x$redhat_os_type" != 'x' ]; then
+    if [ "x$redhat_os_type" == 'xfedora' ]; then
+      if [ $os_release -ge 19 ]; then
+        os_release=7
+      else
+        if [ $os_release -ge 12 ]; then
+          os_release=6
+        fi
+      fi
+    fi
+  fi
+fi
+
+exec 3>/dev/null
+[ "x$MLNX_DEBUG" == 'xyes' ] && exec 3>&2
+
+mellanox_dir_home=/opt/mellanox
+mellanox_dir_bin=$mellanox_dir_home/bin
+mellanox_dir_var=$mellanox_dir_home/var
+mellanox_dir_src=$mellanox_dir_home/src
+mellanox_dir_install=$mellanox_dir_home/install
+mellanox_config_util=/usr/bin/$mlnx_config
+mellanox_ofed_version_deploy=ofed-deploy
+
+repository_apt_openstack_list=/etc/apt/sources.list.d/mellanox-openstack-repository.list
+repository_apt_ofed_list=/etc/apt/sources.list.d/mellanox-ofed-repository.list
+repository_yum_openstack_repo=/etc/yum.repos.d/mellanox-openstack-repository.repo
+repository_yum_ofed_repo=/etc/yum.repos.d/mellanox-ofed-repository.repo
+repository_base_url=http://bgate.mellanox.com/openstack
+repository_name_openstack=openstack-mellanox
+repository_name_ofed=ofed-mellanox
+repository_apt_component_openstack=main
+repository_apt_component_ofed=main
+
+repository_title_openstack='Mellanox Openstack Repository'
+repository_title_ofed='Mellanox OFED Repository'
+
+repository_apt_openstack_template="# ${repository_title_openstack}
+deb [arch=amd64] <%MLNX_BASE_URL%>/<%OPENSTACK_RELEASE%>/ubuntu/<%OS_RELEASE%> <%MLNX_REPO_NAME_OPENSTACK%> <%MLNX_REPO_COMP_OPENSTACK%>"
+
+repository_apt_ofed_template="# ${repository_title_ofed}
+deb [arch=amd64] <%MLNX_BASE_URL%>/ofed-cloud/<%OFED_VERSION%>/ubuntu/<%OS_RELEASE%> <%MLNX_REPO_NAME_OFED%> <%MLNX_REPO_COMP_OFED%>"
+
+repository_yum_openstack_template="[<%MLNX_REPO_NAME_OPENSTACK%>]
+name=${repository_title_openstack}
+baseurl=<%MLNX_BASE_URL%>/<%OPENSTACK_RELEASE%>/redhat/<%OS_RELEASE%>
+enabled=1
+gpgcheck=0"
+
+repository_yum_ofed_template="[<%MLNX_REPO_NAME_OFED%>]
+name=${repository_title_ofed}
+baseurl=<%MLNX_BASE_URL%>/ofed-cloud/<%OFED_VERSION%>/redhat/<%OS_RELEASE%>
+enabled=1
+gpgcheck=0"
+
+repository_iso_url=${repository_base_url}/ofed-cloud/iso/
+iso_prefix_image='MLNX_OFED_LINUX'
+iso_prefix_ubuntu='ubuntu'
+iso_prefix_redhat='rhel'
+iso_sufix_image='x86_64.iso'
+
+mlnx_ofed_installer=mlnxofedinstall
+mlnx_ofed_install_mntdir=$mellanox_dir_install/mnt
+mlnx_ofed_install_isodir=$mellanox_dir_install/iso
+mlnx_ofed_install_logdir=$mellanox_dir_install/log
+mlnx_ofed_install_errcodefile=${mlnx_ofed_installer}.exit.error.code
+mlnx_ofed_install_errcodeprefix='INSTALL_EXIT_ERROR_CODE='
+
+ubuntu_supported_version=(
+        14.04
+        15.04
+)
+
+redhat_supported_version=(
+        6
+        7
+)
+
+redhat_iso_releases=(
+        6:6.6
+        7:7.0
+)
+
+ofed_default_version=3.1-1.0.3
+
+ofed_supported_version=(
+        2.4-2.0.3
+        3.1-1.0.3
+)
+
+ofed_supported_version_mapping=(
+        redhat:6:2.4-2.0.3,3.1-1.0.3
+        redhat:7:2.4-2.0.3,3.1-1.0.3
+        ubuntu:14.04:2.4-2.0.3,3.1-1.0.3
+        ubuntu:15.04:3.1-1.0.3
+)
+
+openstack_supported_release=(
+        kilo
+)
+
+package_ofed_remove=(
+        openibd-eth-ipoib-fix mlnx-ofa_kernel mlnx-ofa_kernel-modules ibdump
+        mlnx-ethtool mlnx-fw-updater libsdp1 libsdp-dev sdpnetstat ar_mgr
+        ar-mgr cc_mgr cc-mgr compat-dapl1 compat-dapl-dev dapl1 dapl1-utils
+        dapl2-utils dapl-dev dump_pr dump-pr ibacm ibacm-dev ibsim ibsim-utils
+        ibutils ibutils2 ibverbs-utils infiniband-diags libdapl2 libdapl-dev
+        libibcm libibcm1 libibcm-dev libibdm1 libibdm-dev libibmad libibmad1
+        libibmad-dev libibmad-devel libibmad-static libibumad libibumad1
+        libibumad-dev libibumad-devel libibumad-static libibverbs libibverbs1
+        libibverbs1-dbg libibverbs-dev libipathverbs1 libipathverbs1-dbg
+        libipathverbs-dev libmlx4 libmlx4-1 libmlx4-1-dbg libmlx4-dev libmlx5
+        libmlx5-1 libmlx5-1-dbg libmlx5-dev libopensm libopensm2 libopensm2-dev
+        libopensm-dev libopensm-devel librdmacm librdmacm1 librdmacm1-dbg
+        librdmacm-dev libsdp1 libumad2sim0 mlnx-ofed-kernel-dkms mlnx-ofed-kernel-utils
+        ofed-docs ofed-scripts opensm opensm-libs opensm-doc perftest rdmacm-utils
+        rds-tools sdpnetstat srptools mft kernel-mft-dkms mft-compat mft-devel
+        mft-devmon mft-devmondb mft-int mft-tests mstflint mxm fca openmpi
+        openshmem mpitests knem knem-dkms ummunotify ummunotify-dkms libvma
+        mlnx-en srptools iser-dkms isert-dkms srp-dkms libmthca-dev libmthca1
+        libmthca1-dbg
+)
+
+package_ofed_pre_install=(
+        autoconf automake chrpath dpkg gcc cpp quilt swig numactl graphviz m4 make 
+)
+
+if [ "x$os_is_ubuntu" == 'xyes' ]; then
+  package_ofed_pre_install+=(
+        autotools-dev conf debhelper dpatch libcr-dev libltdl-dev python-libxml2
+        libboost-all-dev libboost-regex-dev
+  )
+fi
+
+if [ "x$os_is_redhat" == 'xyes' ]; then
+  package_ofed_pre_install+=(
+        boost boost-devel boost-static libxml2-python
+  )
+fi
+
+package_ofed_post_install=(
+        mc openibd-eth-ipoib-fix
+)
+
+mlnx_opensm_exec=/usr/sbin/opensm
+mlxconfig_exec=/usr/bin/mlxconfig
+mlnx_mst_exec=/usr/bin/mst
+
+mlnx_openib_conf=/etc/infiniband/openib.conf
+mlnx_opensm_conf=/etc/opensm/opensm.conf
+mlnx_opensm_create_config_option='--allow_both_pkeys  --priority 1 --create-config'
+mlnx_opensm_partitions_conf=/etc/opensm/partitions.conf
+
+mlnx_connectx_port_config_exec=/sbin/connectx_port_config
+default_grub=/etc/default/grub
+
+mlnx_fw_sriov_home=/opt/mellanox/mlnx-fw-updater/firmware
+mlnx_fw_sriov_disable=$mlnx_fw_sriov_home/mlxfwmanager_sriov_dis_x86_64
+mlnx_fw_sriov_enable=$mlnx_fw_sriov_home/mlxfwmanager_sriov_en_x86_64
+
+sysctl_conf_no_apply=no
+sysctl_conf_file=/etc/sysctl.conf
+
+ubuntu_interfaces_file=/etc/network/interfaces
+redhat_interfaces_dir=/etc/sysconfig/network-scripts
+
+mlnx_deploy_vf_default=8
+
+mlx4_core_conf_file=/etc/modprobe.d/mlx4_core.conf
+mlx4_core_header_string="# Configuration of Mellanox module mlx4_core"
+mlx4_core_prefix_string="options mlx4_core enable_64b_cqe_eqe=0 log_num_mgm_entry_size=-1"
+
+mlnx_udev_log_level=debug
+mlnx_udev_namer=mlnx-udev-namer
+mlnx_udev_src_dir=${mellanox_dir_src}/${mlnx_udev_namer}
+mlnx_udev_src_file_rules=80-mlnx-udev-namer.rules
+mlnx_udev_src_file_makefile=Makefile
+mlnx_udev_src_file_conf=mlnx-udev-namer.conf
+mlnx_udev_namer_req_boost_lib=libboost_regex.a
+mlnx_udev_persistent_net_rules_file=/etc/udev/rules.d/70-persistent-net.rules
+mlnx_udev_mellanox_save_rules_file=/etc/udev/rules.d/75-mellanox-saved.rules
+mlnx_udev_mellanox_namer_conf_file=/etc/udev/mlnx-udev-namer.conf
+
+ubuntu_init_openibd_conf_file=/etc/init/openibd.conf
+ubuntu_init_openibd_conf_content="# openibd - configure RDMA network devices
+#
+description \"openibd - configure Mellanox devices\"
+start on (runlevel [2345] and started udev)
+stop on runlevel [!2345]
+pre-start script
+  exec /etc/init.d/openibd start auto
+  exec ifup -a
+end script
+post-stop exec /etc/init.d/openibd stop
+"
+
+#-----------------------------------------------------------------------------------------------------
+function print_error_end_exit () {
+  echo "Error: $1" 1>&2
+  exit 1
+}
+
+function print_message_end_exit () {
+  echo "$1" 1>&2
+  exit 0
+}
+
+function print_debug_message () {
+  { echo "$1" 1>&2; } >&3 2>&1
+}
+
+function is_enable_disable () {
+  local on="$1"
+  local ov="$2"
+
+  [ "x${ov}" != 'xenable' -a \
+    "x${ov}" != 'xdisable' ] && \
+      print_error_end_exit "Not supported ${on} mode '${ov}', use enable|disable"
+}
+
+function is_redhat_supported () {
+  local rv="$1"
+
+  if [ "x$os_is_redhat" == 'xyes' ]; then
+    local is=no
+
+    for v in ${redhat_supported_version[@]}; do
+      if [ "x$v" == "x$rv" ]; then
+        is=yes
+        break
+      fi
+    done
+
+    [ "x$is" != 'xyes' ] && \
+        print_error_end_exit "Not supported Redhat OS '$redhat_current_os_release'"
+
+  else
+    print_error_end_exit "Current OS is not Redhat OS"
+  fi
+
+  return 0
+}
+
+function is_ubuntu_supported () {
+  local uv="$1"
+
+  if [ "x$os_is_ubuntu" == 'xyes' ]; then
+    local is=no
+
+    for v in ${ubuntu_supported_version[@]}; do
+      if [ "x$v" == "x$uv" ]; then
+        is=yes
+        break
+      fi
+    done
+
+    [ "x$is" != 'xyes' ] && \
+      print_error_end_exit "Not supported Ubuntu version '$uv'"
+
+  else
+    print_error_end_exit "Current OS is not Ubuntu"
+  fi
+
+  return 0
+}
+
+function is_os_supported () {
+  local ov="$1"
+
+  [ "x$os_is_ubuntu" == 'xyes' ] && \
+    is_ubuntu_supported "$ov"
+
+  [ "x$os_is_redhat" == 'xyes' ] && \
+    is_redhat_supported "$ov"
+}
+
+function is_openstack_supported () {
+  local or="$1"
+  local is=no
+
+  for v in ${openstack_supported_release[@]}; do
+    if [ "x$v" == "x$or" ]; then
+      is=yes
+      break
+    fi
+  done
+
+  [ "x$is" != 'xyes' ] && \
+    print_error_end_exit "Not supported Openstack release '$or'"
+
+  return 0
+}
+
+function is_ofed_supported () {
+  local ov="$1"
+
+  local os_prefix=''
+  [ "x$os_is_ubuntu" == 'xyes' ] && \
+    os_prefix=ubuntu
+
+  [ "x$os_is_redhat" == 'xyes' ] && \
+    os_prefix=redhat
+
+  [ "x$os_prefix" == 'x' ] && \
+    print_error_end_exit "Not supported OS"
+
+  local is=no
+  for vl in ${ofed_supported_version_mapping[@]}; do
+    local el_ost=""
+    local el_osv=""
+    local el_ofv=""
+
+    local eline=`echo "$vl" | \
+                    awk -F : '{printf("el_ost=\"%s\"; el_osv=\"%s\"; el_ofv=\"%s\";\n", $1, $2, $3);}'`
+    eval "$eline" > /dev/null 2>&1
+
+    if [ "x$el_ost" != 'x' -a \
+          "x$el_osv" != 'x' -a \
+          "x$el_ofv" != 'x' -a \
+          "x$el_ost" == "x$os_prefix" -a \
+          "x$el_osv" == "x$os_release" ]; then
+
+      for v in `echo "$el_ofv" 2> /dev/null | \
+                      tr ',' ' '`; do
+        if [ "x$v" == "x$ov" ]; then
+          is=yes
+          break
+        fi
+      done                      
+
+    fi        
+    [ "x$is" == "xyes" ] && break
+  done
+
+  [ "x$is" != 'xyes' ] && \
+    print_error_end_exit "Not supported OFED version '$ov'"
+
+  return 0
+}
+
+function is_ofed_v_X () {
+  local ovs="$1"
+  local ovn="$2"
+
+  echo "$ovs" | \
+    egrep "^$ovn\." > /dev/null 2>&1
+
+  return $?
+}
+
+function is_valid_netmask () {
+    nmre='254|252|248|240|224|192|128'
+
+    echo "$1" | \
+        egrep "^($nmre)\.0\.0\.0|255\.($nmre|0)\.0\.0|255\.255\.($nmre|0)\.0|255\.255\.255\.($nmre|0)\$" > /dev/null 2>&1
+
+    return $?
+}
+
+function is_valid_ip_address () {
+    iare1='25[0-4]|2[0-4][0-9]|1[0-9][0-9]|[1]?[1-9][0-9]?'
+    iare2='25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?'
+
+    echo "$1" | \
+        egrep "^($iare1)\.($iare2)\.($iare2)\.($iare2)\$" > /dev/null 2>&1
+
+    return $?
+}
+
+function is_valid_interface_name () {
+    echo "$1" | \
+        egrep '^[[:alpha:]](\w|-){,15}$' > /dev/null 2>&1
+
+    return $?
+}
+
+function is_valid_interface_alias_name () {
+    echo "$1" | \
+        egrep '^[[:alnum:]](\w|-){,15}$' > /dev/null 2>&1
+
+    return $?
+}
+
+function is_interface_present () {
+  local in="$1"
+
+  if [ "x$os_is_ubuntu" == 'xyes' ]; then
+    ifconfig -a | \
+      tr '\t' ' ' | \
+      grep -i 'link  *encap' | \
+      awk '{printf("%s\n",$1);}' | \
+      sed -e '/[:.]/d' | \
+      egrep "^${in}\$" > /dev/null 2>&1
+    return $?
+  fi  
+
+  if [ "x$os_is_redhat" == 'xyes' ]; then
+    ifconfig -a | \
+      tr '\t' ' ' | \
+      egrep "^${in}: " > /dev/null 2>&1
+    return $?
+  fi
+
+  return 1
+}
+
+function is_interface_target_present () {
+
+  [ "x$os_is_redhat" == 'xyes' -a \
+    -d $redhat_interfaces_dir ] && return 0
+
+  [ "x$os_is_ubuntu" == 'xyes' -a \
+    -f "$ubuntu_interfaces_file" ] return 0
+
+  return 1
+}
+
+function create_repository () {
+  local r="$1"
+
+  {
+    sed -e "s|<%MLNX_BASE_URL%>|$repository_base_url|g" \
+        -e "s|<%OPENSTACK_RELEASE%>|$openstack_release|g" \
+        -e "s|<%OS_RELEASE%>|$os_release|g" \
+        -e "s|<%MLNX_REPO_NAME_OPENSTACK%>|$repository_name_openstack|g" \
+        -e "s|<%MLNX_REPO_COMP_OPENSTACK%>|$repository_apt_component_openstack|g" \
+        -e "s|<%OFED_VERSION%>|$ofed_version|g" \
+        -e "s|<%MLNX_REPO_NAME_OFED%>|$repository_name_ofed|g" \
+        -e "s|<%MLNX_REPO_COMP_OFED%>|$repository_apt_component_ofed|g"
+    echo
+  } 2> /dev/null > $r
+
+  {
+    printf "\nCreated repository file '$r'\n"
+    echo "Content:"
+    cat $r
+    printf "\n\n"
+  } >&3 2>&1
+}
+
+function configure_ofed_repository () {
+  local ov="$1"
+
+  [ "x$ov=" == 'x' ] && \
+    print_error_end_exit "Not provided required parameters"
+
+  is_os_supported $os_release
+  is_ofed_supported "$ov"
+  
+  ofed_version=$ov
+  
+  [ "x$os_is_ubuntu" == 'xyes' ] && \
+    echo "$repository_apt_ofed_template" | \
+      create_repository "$repository_apt_ofed_list"
+
+  [ "x$os_is_redhat" == 'xyes' ] && \
+    echo "$repository_yum_ofed_template" | \
+      create_repository "$repository_yum_ofed_repo"
+}
+
+function configure_openstack_repository () {
+  local ov="$1"
+
+  [ "x$ov=" == 'x' ] && \
+    print_error_end_exit "Not provided required parameters"
+
+  is_os_supported $os_release
+  is_openstack_supported "$ov"
+  
+  openstack_release=$ov
+
+  [ "x$os_is_ubuntu" == 'xyes' ] && \
+    echo "$repository_apt_openstack_template" | \
+      create_repository "$repository_apt_openstack_list"
+
+  [ "x$os_is_redhat" == 'xyes' ] && \
+    echo "$repository_yum_openstack_template" | \
+      create_repository "$repository_yum_openstack_repo"
+}
+
+function ofed_install () {
+  local ov="$1"
+  local ci=''
+
+  [ "x$ov" == 'x' ] && ov=$ofed_default_version
+  is_ofed_supported "$ov"
+
+  is_os_supported "$os_release"
+  is_ofed_supported "$ov"
+
+  local is_ofed_v2=no
+  is_ofed_v_X "$ov" 2 && \
+    is_ofed_v2=yes
+
+  local is_ofed_v3=no
+  is_ofed_v_X "$ov" 3 && \
+    is_ofed_v3=yes
+
+  if [ "x$os_is_ubuntu" == 'xyes' ]; then
+    apt-get update >&3 2>&1
+    ci='apt-get install -y --force-yes'
+  fi
+    
+  if [ "x$os_is_redhat" == 'xyes' ]; then
+    yum clean all >&3 2>&1
+    ci='yum install -y'
+  fi
+
+  mkdir -pv $mlnx_ofed_install_mntdir \
+            $mlnx_ofed_install_isodir \
+            $mlnx_ofed_install_logdir >&3 2>&1
+
+  downl_url=''
+  downl_iso=''
+  if [ "x$os_is_ubuntu" == 'xyes' -o \
+        "x$os_is_redhat" == 'xyes' ]; then
+
+    if [ "x$os_is_ubuntu" == 'xyes' ]; then
+      downl_iso=${iso_prefix_image}-${ov}-${iso_prefix_ubuntu}${os_release}-${iso_sufix_image}
+      downl_url=${repository_iso_url}/${downl_iso}
+
+    else
+
+      for r in ${redhat_iso_releases[@]}; do
+        or=''
+        ir=''
+
+        eline=`echo "$r" | awk -F : '{printf("or=\"%s\"; ir=\"%s\"\n", $1, $2);}'`
+        eval "$eline" > /dev/null 2>&1
+
+        if [ "x$or" != 'x' -a "x$ir" != 'x' -a "x$or" == "x$os_release" ]; then
+          downl_iso=${iso_prefix_image}-${ov}-${iso_prefix_redhat}${ir}-${iso_sufix_image}
+          downl_url=${repository_iso_url}/${downl_iso}
+          break
+        fi
+      done
+    fi
+  fi
+
+  [ "x$downl_url" == 'x' ] && \
+    print_error_end_exit "Ofed iso image download url not defined"
+  
+  echo 'DOWNLOAD OFED ISO IMAGE:'
+  echo "  $downl_iso"
+
+  [ -f $mlnx_ofed_install_isodir/$downl_iso ] && \
+    rm -fv $mlnx_ofed_install_isodir/$downl_iso >&3 2>&1
+
+  wget ${downl_url} -O $mlnx_ofed_install_isodir/$downl_iso >&3 2>&1
+
+  [ "x$?" != "x0" ] && \
+    print_error_end_exit "Cannot download Ofed iso image; $downl_url"
+  
+  umount -f ${mlnx_ofed_install_mntdir} >&3 2>&1
+  mount -o loop $mlnx_ofed_install_isodir/$downl_iso ${mlnx_ofed_install_mntdir} >&3 2>&1
+
+  [ -f ${mlnx_ofed_install_mntdir}/${mlnx_ofed_installer} ] || \
+    {
+      umount -f ${mlnx_ofed_install_mntdir} >&3 2>&1
+      print_error_end_exit "Not found Mellanox OFED installer '${mlnx_ofed_install_mntdir}/${mlnx_ofed_installer}'"
+    }
+  
+  echo 'INSTALL PREREQUIRED PACKAGES:'
+  if [ "x$ci" != 'x' ]; then
+    for p in ${package_ofed_pre_install[@]}; do
+      echo "  installing $p"
+      $ci $p >&3 2>&1
+    done
+  fi
+  
+  echo 'INSTALL OFED PACKAGES:'
+
+  { 
+    local verbose=''
+    [ "x$os_is_redhat" == 'xyes' ] && \
+      verbose='-vv'
+
+    rm -f ${mlnx_ofed_install_logdir}/${mlnx_ofed_install_errcodefile} > /dev/null 2>&1
+
+    stdbuf -o0 perl ${mlnx_ofed_install_mntdir}/${mlnx_ofed_installer} \
+	              --tmpdir ${mlnx_ofed_install_logdir} \
+	              --force \
+	              --enable-sriov \
+	              --add-kernel-support \
+	              --skip-distro-check \
+	              $verbose 2>&1
+
+    echo "${mlnx_ofed_install_errcodeprefix}$?" > ${mlnx_ofed_install_logdir}/${mlnx_ofed_install_errcodefile}
+  } |& \
+  {
+    if [ "x$MLNX_DEBUG" == 'xyes' ]; then
+      stdbuf -o0 egrep '^.'
+
+    else
+      {
+        stdbuf -o0 tr '\n' '|' |& \
+        stdbuf -o0 tr -d '[:cntrl:]' |& \
+        stdbuf -o0 tr '|' '\n'
+      } |& \
+      {
+        if [ "x$os_is_ubuntu" == 'xyes' ]; then
+          sed -u -n '/^\(\[34m\)* *.nstalling */p' |& \
+          sed -u -e 's/^\(\[34m\)* *.nstalling *//' \
+	          -e 's/[\. ]*\(\[0m\)*$//' \
+	          -e 's/^ *//' \
+	          -e '/new *packages/d' \
+	          -e 's/^/  /'
+        else
+          stdbuf -o0 egrep 'rpm --nosignature -(i *-|U)vh' |& \
+          sed -u -e 's|^.*/||' -e 's/\.rpm.*$//' \
+              -e 's/\(\.\(x86_64\|noarch\)\)*$//' \
+              -e 's/\.\(rhel[0-9]*u[0-9]*\|el[0-9]*\)$//' \
+	          -e 's/^/  /'
+        fi
+      }
+    fi
+  }
+
+  umount -f ${mlnx_ofed_install_mntdir} >&3 2>&1
+
+  rc=`cat ${mlnx_ofed_install_logdir}/${mlnx_ofed_install_errcodefile} 2> /dev/null | \
+	    head -1 | \
+	    sed -n "/^${mlnx_ofed_install_errcodeprefix}/p" | \
+	    sed -e "s/^${mlnx_ofed_install_errcodeprefix}//"`
+
+  rm -f ${mlnx_ofed_install_logdir}/${mlnx_ofed_install_errcodefile} > /dev/null 2>&1
+
+  echo "OFED INSTALLATION ERROR CODE=$rc"
+  echo "REMOVE TEMPORARY FILES/DIRS:"
+
+  {
+    if [ "x$mlnx_ofed_install_logdir" != 'x' -a \
+          "x$mlnx_ofed_install_logdir" != 'x/' ]; then
+      ls -1 ${mlnx_ofed_install_logdir} | \
+	    sed -e '/[lL][oO][gG]/d' | \
+	    while read f; do
+		  echo "  remove $f"
+		  rm -rfv ${mlnx_ofed_install_logdir}/$f > /dev/null 2>&1
+	    done
+    fi
+  }
+
+  echo 'INSTALL ADDITIONAL PACKAGES:'
+  if [ "x$ci" != 'x' ]; then
+
+    for p in ${package_ofed_post_install[@]}; do
+      echo "  installing $p"
+      $ci $p >&3 2>&1
+    done
+  fi
+
+  if [ "x$is_ofed_v2" == 'xyes' ]; then
+    echo 'INSTALL FIRMWARE MANAGER.'
+    {
+      mkdir -pv $mlnx_fw_sriov_home
+
+      for f in mlxfwmanager_sriov_dis_x86_64 \
+                mlxfwmanager_sriov_en_x86_64; do
+
+        if [ -f ${mlnx_ofed_install_mntdir}/firmware/$f ]; then
+          [ -f $mlnx_fw_sriov_home/$f ] && rm -fv $mlnx_fw_sriov_home/$f
+          cp -fv ${mlnx_ofed_install_mntdir}/firmware/$f $mlnx_fw_sriov_home/$f
+          chmod +x $mlnx_fw_sriov_home/$f
+        fi
+      done
+    } >&3 2>&1
+  fi
+}
+
+function ofed_remove () {
+  echo REMOVE OLD PACKAGES:
+  local cr=''
+
+  [ "x$os_is_ubuntu" == 'xyes' ] && \
+    cr='apt-get remove -y'
+
+  [ "x$os_is_redhat" == 'xyes' ] && \
+    cr='yum remove -y'
+
+  [ "x$cr" == 'x' ] && \
+    print_error_end_exit "Not supported OS"
+
+  if [ "x$cr" != 'x' ]; then
+    for p in ${package_ofed_remove[@]}; do
+      echo "  removing $p"
+      $cr $p >&3 2>&1
+    done
+  fi
+
+  {
+    for f in mlxfwmanager_sriov_dis_x86_64 \
+              mlxfwmanager_sriov_en_x86_64; do
+      [ -f $mlnx_fw_sriov_home/$f ] && rm -fv $mlnx_fw_sriov_home/$f
+    done
+  } >&3 2>&1
+}
+
+function ofed_bundle_deploy () {
+  local ov="$1"
+
+  [ "x$ov" == 'x' ] && ov=$ofed_default_version
+  is_ofed_supported "$ov"
+
+  local mode_e_ipoib=disable
+  [ "x$MLNX_DEPLOY_ENABLE_E_IPOIB" == 'xyes' ] && mode_e_ipoib=enable
+
+  local p0m=ib
+  [ "x$MLNX_DEPLOY_MODE_PORT0" == 'xeth' ] && p0m=eth
+
+  local p1m=ib
+  [ "x$MLNX_DEPLOY_MODE_PORT1" == 'xeth' ] && p1m=eth
+
+  local nv=`expr "$MLNX_DEPLOY_VF_NUM" \+ 0 2> /dev/null`
+  [ "x$nv" == 'x' ] && nv=$mlnx_deploy_vf_default
+
+  echo "STOP MST, OPENSMD, OPENIBD"
+  mst stop
+  opensmd stop
+  openibd stop
+
+  echo "CONFIGURE MELLANOX OFED REPOSITORY: Ofed=${ov}"
+  configure_ofed_repository "$ov"
+
+  echo "INSTALL OFED, Ofed=$ov"
+  ofed install "$ov"
+
+  echo "SRIOV - KERNEL SUPPORT ENABLE"
+  sriov enable
+
+  echo "E_IPOIB ENABLE"
+  e_ipoib "$mode_e_ipoib"
+
+  local delay=`expr "$MLNX_E_IPOIB_PRE_START_DELAY" \+ 0 2>/dev/null`
+  [ "x$delay" == 'x' ] && delay=0
+  echo "SET E_IPOIB POST START DELAY = $delay sec"
+  e_ipoib_pre_start_delay "$delay"
+
+  echo "CONFIGURE MELLANOX MODPROBE, SET: Mode=${p0m}:${p1m}, Vf=$nv"
+  set_vf_type_num "$p0m" "$p1m" "$nv"
+
+  echo "MELLANOX UDEV NAMER ENABLE"
+  udev_namer_rules enable
+
+  echo "OPENIBD AUTOSTART ENABLE"
+  openibd enable
+  openibd stop
+
+  echo "DONE"
+  delay=`expr "$MLNX_POST_DEPLOY_DELAY" \+ 0 2>/dev/null`
+  [ "x$delay" == 'x' ] && delay=0
+  sleep $delay
+}
+
+function ofed () {
+  local oc="$1"
+  local ov="$2"
+
+  [ "x$oc" != 'xinstall' -a \
+    "x$oc" != 'xremove' ] && \
+      print_error_end_exit "Not supported ofed command '$oc', use install|remove"
+
+  ofed_remove
+  [ "x$oc" == 'xinstall' ] && ofed_install "$ov"
+}
+
+function e_ipoib () {
+  local em="$1"
+  is_enable_disable 'E_IPOIB' "$em"
+
+  ei=no
+  [ "x$em" == 'xenable' ] && ei=yes
+
+  tc=/tmp/`basename $mlnx_openib_conf`
+
+  {
+    cat "$mlnx_openib_conf" 2> /dev/null | \
+      tr '\t' ' ' | \
+        sed -e '/E_IPOIB_LOAD/d'
+    echo "E_IPOIB_LOAD=$ei"
+  } > "$tc"
+
+  {
+    rm -fv "$mlnx_openib_conf"
+    mv -fv "$tc" "$mlnx_openib_conf"
+  } > /dev/null 2>&1
+
+  {
+    printf "\nCreated openibd config file '$mlnx_openib_conf'\n"
+    echo "Content:"
+    cat $mlnx_openib_conf
+    printf "\n\n"
+  } >&3 2>&1
+
+}
+
+function e_ipoib_pre_start_delay () {
+  local ed="$1"
+  ed=`expr "$ed" \+ 0 2> /dev/null`
+
+  [ "x$ed" == 'x' ] && \
+    print_error_end_exit "Not E_IPOIB pre start delay '$1' is not integer"
+
+  tc=/tmp/`basename $mlnx_openib_conf`
+
+  {
+    cat "$mlnx_openib_conf" 2> /dev/null | \
+      tr '\t' ' ' | \
+        sed -e '/ETH_IPOIB_PRELOAD_DELAY/d'
+    echo "ETH_IPOIB_PRELOAD_DELAY=$ed"
+  } > "$tc"
+
+  {
+    rm -fv "$mlnx_openib_conf"
+    mv -fv "$tc" "$mlnx_openib_conf"
+  } > /dev/null 2>&1
+
+  {
+    printf "\nCreated openibd config file '$mlnx_openib_conf'\n"
+    echo "Content:"
+    cat $mlnx_openib_conf
+    printf "\n\n"
+  } >&3 2>&1
+
+}
+
+function service_mgm () {
+  local sn="$1"
+  local sc="$2"
+
+  [ "x$sc" != 'xenable' -a \
+    "x$sc" != 'xdisable' -a \
+    "x$sc" != 'xrestart' -a \
+    "x$sc" != 'xstop' -a \
+    "x$sc" != 'xstart' ] && \
+      print_error_end_exit "Not supported by service '$sn' command '$sc', use enable|disable|restart|stop|start"
+
+  case "$sc" in
+
+    restart|stop|start)
+      service $sn $sc >&3 2>&1
+      ;;
+
+    enable)
+      if [ "x$os_is_ubuntu" == 'xyes' ]; then
+        update-rc.d $sn defaults >&3 2>&1
+      fi
+      if [ "x$os_is_redhat" == 'xyes' ]; then
+        chkconfig --add $sn >&3 2>&1
+        chkconfig $sn on >&3 2>&1
+      fi
+      ;;
+
+    disable)
+      if [ "x$os_is_ubuntu" == 'xyes' ]; then
+        update-rc.d -f $sn remove >&3 2>&1
+      fi
+      if [ "x$os_is_redhat" == 'xyes' ]; then
+        chkconfig $sn off >&3 2>&1
+      fi
+      ;;
+
+    *)
+      ;;
+  esac
+}
+
+function initctl_mgm () {
+  local sn="$1"
+  local sc="$2"
+
+  [ "x$sc" != 'xrestart' -a \
+    "x$sc" != 'xstop' -a \
+    "x$sc" != 'xstart' ] && \
+      print_error_end_exit "Not supported by initctl job '$sn' command '$sc', use restart|stop|start"
+
+  initctl $sc $sn >&3 2>&1
+}
+
+function opensmd () {
+  service_mgm 'opensmd' "$1"
+}
+
+function openibd () {
+  local sn='openibd'
+  local sc="$1"
+
+  [ "x$sc" != 'xenable' -a \
+    "x$sc" != 'xdisable' -a \
+    "x$sc" != 'xrestart' -a \
+    "x$sc" != 'xstop' -a \
+    "x$sc" != 'xstart' ] && \
+      print_error_end_exit "Not supported by $sn' command '$sc', use enable|disable|restart|stop|start"
+
+  if [ "x$os_is_ubuntu" == 'xyes' ]; then
+    case "$sc" in
+
+      restart|stop|start)
+        initctl_mgm $sn $sc >&3 2>&1
+        ;;
+
+      enable|disable)
+        service_mgm $sn disable >&3 2>&1
+        {
+          if [ "x$sc" == 'xenable' ]; then
+            echo "$ubuntu_init_openibd_conf_content" > $ubuntu_init_openibd_conf_file
+          else
+            rm -fv $ubuntu_init_openibd_conf_file
+          fi
+        } >&3 2>&1
+        ;;
+
+      *)
+        ;;
+    esac
+  fi
+
+  if [ "x$os_is_redhat" == 'xyes' ]; then
+    service_mgm 'openibd' "$1"
+  fi
+}
+
+function mst () {
+  service_mgm 'mst' "$1"
+}
+
+function pk_to_vlan_map () {
+  local vmin="$1"
+
+  [ "x$vmin" == 'x'  ] && \
+    print_error_end_exit "Not specified VLAN minimum parameter"
+
+  vmin=`expr "$vmin" \+ 0 2> /dev/null`
+  [ "x$vmin" == 'x'  ] && \
+    print_error_end_exit "Specified not correct VLAN minimum parameter '$1'"
+
+  local vmax="$2"
+  [ "x$vmax" == 'x'  ] && \
+    print_error_end_exit "Not specified VLAN maximum parameter"
+
+  vmax=`expr "$vmax" \+ 0 2> /dev/null`
+  [ "x$vmax" == 'x' ] && \
+      print_error_end_exit "Specified not correct VLAN maximum parameter '$2'"
+
+  [ $vmax \< $vmin ] && \
+      print_error_end_exit "Specified not correct VLAN maximum parameter '$2'"
+
+  local pk_min=1
+  [ "x$3" != "x" ] && \
+    pk_min="$3"
+
+  pk_min=`expr "$pk_min" \+ 0 2> /dev/null`
+  [ "x$pk_min" == 'x'  ] && \
+    print_error_end_exit "Specified not correct PK minimum parameter '$3'"
+
+  [ -x $mlnx_opensm_exec ] || \
+    print_error_end_exit "Not found required executable file '$mlnx_opensm_exec'"
+
+  {
+    mkdir -pv \
+      `dirname "$mlnx_opensm_conf" 2> /dev/null` \
+      `dirname "$mlnx_opensm_partitions_conf" 2> /dev/null`
+
+    rm -fv $mlnx_opensm_conf
+    $mlnx_opensm_exec $mlnx_opensm_create_config_option $mlnx_opensm_conf
+  } > /dev/null 2>&1
+
+  {
+    printf "\nCreated opensm file '$mlnx_opensm_conf'\n"
+    echo "Content:"
+    cat $mlnx_opensm_conf
+    printf "\n\n"
+  } >&3 2>&1
+
+  {
+    echo "management=0x7fff,ipoib, sl=0, defmember=full: ALL, ALL_SWITCHES=full,SELF=full;"
+
+    pk=$pk_min
+    for (( vlan=$vmin; vlan<=$vmax; vlan++ )); do
+      printf "vlan%s=0x%x, ipoib, sl=0, defmember=full: ALL_CAS;\n" $vlan $pk
+      pk=`expr $pk \+ 1`
+    done
+  } 2> /dev/null > $mlnx_opensm_partitions_conf
+
+  {
+    printf "\nCreated opensm partitions file '$mlnx_opensm_partitions_conf'\n"
+    echo "Content:"
+    cat $mlnx_opensm_partitions_conf
+    printf "\n\n"
+  } >&3 2>&1
+}
+
+function connectx_port_config () {
+  local p0m="$1"
+  local p1m="$2"
+
+  [ -x $mlnx_connectx_port_config_exec ] || \
+    print_error_end_exit "Not found required executable file '$mlnx_connectx_port_config_exec'"
+
+  [ "x$p0m" == 'x' ] && \
+    print_error_end_exit "Not specified mode for port 0"
+
+  [ "$p0m" != 'ib' -a \
+    "$p0m" != 'eth' ] && \
+      print_error_end_exit "Specified not supported mode '$p0m' for port 0, use <ib|eth>"
+
+  [ "x$p1m" == 'x' ] && \
+    print_error_end_exit "Not specified mode for port 1"
+
+  [ "$p1m" != 'ib' -a \
+    "$p1m" != 'eth' ] && \
+      print_error_end_exit "Specified not supported mode '$p1m' for port 1, use <ib|eth>"
+
+  $mlnx_connectx_port_config_exec -c $p0m,$p1m >&3 2>&1
+}
+
+function sriov () {
+  local sriov_mode="$1"
+
+  [ "x$sriov_mode" != 'xenable' -a \
+    "x$sriov_mode" != 'xdisable' ] && \
+      print_error_end_exit "Not supported SRIOV mode '$sriov_mode', use enable|disable"
+
+  local iion='intel_iommu=on'
+  if [ -f "$default_grub" ]; then
+    {
+      cat "$default_grub" 2> /dev/null | \
+        while read line; do
+
+          line_output=''
+          GRUB_CMDLINE_LINUX=''
+          line_iommu=`echo "$line" | \
+                        tr '\t' ' ' | \
+                        tr '\n' ' ' | \
+                        sed -e 's/^ *//' \
+                            -e 's/ *$//'`
+
+          if [ "x$line_iommu" == 'x' ]; then
+            line_output="$line"
+
+          else
+            line_iommu=`echo "$line_iommu" | \
+                          sed -e '/^ *GRUB_CMDLINE_LINUX *=/d'`
+
+            if [ "x$line_iommu" != 'x' ]; then
+              line_output="$line"
+
+            else
+              eval "$line" > /dev/null 2>&1
+              GRUB_CMDLINE_LINUX=`echo "$GRUB_CMDLINE_LINUX" | \
+                                    sed -e "s/$iion//g" \
+                                        -e 's/^ *//' \
+                                        -e 's/ *$//'`
+              [ "x$sriov_mode" == 'xenable' ] && GRUB_CMDLINE_LINUX+=" $iion"
+              GRUB_CMDLINE_LINUX=`echo "$GRUB_CMDLINE_LINUX" | \
+                                    sed -e 's/^ *//' \
+                                        -e 's/ *$//'`
+              line_output="GRUB_CMDLINE_LINUX=\"$GRUB_CMDLINE_LINUX\""
+            fi
+          fi
+          printf "$line_output\n"
+      done
+    } > /tmp/grub
+
+    {
+      rm -fv $default_grub
+      mv -fv /tmp/grub $default_grub
+
+      if [ "x$os_is_ubuntu" == 'xyes' ]; then
+        update-grub
+      fi
+
+      if [ "x$os_is_redhat" == 'xyes' ]; then
+        grub2-mkconfig -o /boot/grub2/grub.cfg
+      fi
+    } >&3 2>&1
+
+  fi
+}
+
+function sriov_fw () {
+  local sriov_mode="$1"
+  is_enable_disable 'SRIOV' "$sriov_mode"
+
+  fw_update_exec=$mlnx_fw_sriov_disable
+  [ "x$sriov_mode" == 'xenable' ] && fw_update_exec=$mlnx_fw_sriov_enable
+
+  [ -x "$fw_update_exec" ] || \
+      print_error_end_exit "Not found required executable file '$fw_update_exec'"
+
+  mst start >&3 2>&1
+
+  for device in `lspci | \
+                    grep -i mellanox | \
+                    sed -e '/[vV]irtual/d' | \
+                    awk '{printf("%s\n",$1);}'`; do
+
+    psid=`mstflint -d $device q 2> /dev/null | \
+            grep PSID: | \
+            awk '{print $NF}' | \
+            head -1`
+
+    if [ "x$psid" != 'x' ]; then
+
+      is_psid_supported=`$fw_update_exec -l 2> /dev/null | \
+                            grep "$psid"`
+
+      [ "x$is_psid_supported" != 'x' ] && \
+          $fw_update_exec -d $device -y --force --update >&3 2>&1
+    fi
+  done
+
+  mst stop >&3 2>&1
+}
+
+function sysctl_conf (){
+  local op="$1"
+  local var="$2"
+  local val="$3"
+
+  if [ "x$op" == "xapply" ]; then
+    sysctl -e -p >&3 2>&1
+  fi
+
+  if [ "x$op" == "xunset" -a \
+        "x$var" != "x" ]; then
+    sed -e "/^[\t\ ]*$var[\t\ ]*=.*$/d" -i $sysctl_conf_file
+    if [ "x$sysctl_conf_no_apply" != "xyes" ]; then
+      sysctl_conf apply
+    fi
+  fi
+
+  if [ "x$op" == "xset" -a \
+        "x$var" != "x" -a \
+        "x$val" != "x" ]; then
+    sysctl_conf_no_apply=yes
+    sval="$val"
+    sysctl_conf unset "$var"
+    echo "$var=$sval" >> $sysctl_conf_file
+    sysctl_conf apply
+    sysctl_conf_no_apply=no
+  fi
+}
+
+function set_vf_type_num () {
+  local p0m="$1"
+  local p1m="$2"
+  local nv="$3"
+  local npv="$4"
+
+  [ "x$p0m" == 'x' ] && \
+    print_error_end_exit "Not specified mode for port 0"
+
+  [ "$p0m" != 'ib' -a \
+    "$p0m" != 'eth' ] && \
+      print_error_end_exit "Specified not supported mode '$p0m' for port 0, use <ib|eth>"
+
+  local p0t=1
+  [ "$p0m" == 'eth' ] && p0t=2
+
+  [ "x$p1m" == 'x' ] && \
+    print_error_end_exit "Not specified mode for port 1"
+
+  [ "$p1m" != 'ib' -a \
+    "$p1m" != 'eth' ] && \
+      print_error_end_exit "Specified not supported mode '$p1m' for port 1, use <ib|eth>"
+
+  local p1t=1
+  [ "$p1m" == 'eth' ] && p1t=2
+
+  if [ "x$nv" == 'x' ]; then
+    set_nv=0
+    set_npv=0
+
+  else
+    set_nv=`expr "$nv" \+ 0 2>/dev/null`
+    [ "x$set_nv" == 'x' ] && \
+      print_error_end_exit "Specified number of VF '$nv' is not number"
+
+    set_nv_save=$set_nv
+    set_nv=`expr \( $set_nv \/ 2 \+ $set_nv \% 2 \) \* 2 2>/dev/null`
+
+    [ "x$set_nv" != "x$set_nv" ] && \
+      print_debug_message "Fixed number of VFs from '$set_nv_save' to '$set_nv'"
+
+    [ "x$set_nv" == 'x0' -o \
+      "x$npv" == 'x' ] && npv=0
+
+    set_npv=`expr "$npv" \+ 0 2>/dev/null`
+    [ "x$set_npv" == 'x' ] && \
+      print_error_end_exit "Specified probe of VF '$npv' is not number"
+
+    [[ $set_npv -gt $set_nv ]] && \
+      print_error_end_exit "Specified probe of VF '$npv' must be less that number of VF '$set_nv'"
+  fi
+
+  port_type_array_string=" port_type_array=$p0t,$p1t"
+
+  nv_string=''
+  [ "x$set_nv" != 'x0' ] && nv_string=" num_vf=$set_nv"
+
+  npv_string=''
+  [ "x$set_npv" != 'x0' ] && npv_string=" probe_vf=$set_npv"
+
+  printf "%s\n%s%s%s%s\n" \
+    "$mlx4_core_header_string" \
+    "$mlx4_core_prefix_string" \
+    "$port_type_array_string" \
+    "$nv_string" \
+    "$npv_string" > $mlx4_core_conf_file
+}
+
+function burn_vfs_in_fw () {
+  local nv="$1"
+
+  [ -x $mlxconfig_exec ] || \
+    print_error_end_exit "Not found required executable file '$mlxconfig_exec'"
+
+  set_nv=`expr "$nv" \+ 0 2>/dev/null`
+  [ "x$set_nv" == 'x' ] && \
+    print_error_end_exit "Specified number of VF '$nv' is not number"
+
+  set_nv_save=$set_nv
+  set_nv=`expr \( $set_nv \/ 2 \+ $set_nv \% 2 \) \* 2 2>/dev/null`
+
+  [ "x$set_nv" != "x$set_nv" ] && \
+    print_debug_message "Fixed number of VFs from '$set_nv_save' to '$set_nv'"
+
+  openibd start >&3 2>&1
+  mst start >&3 2>&1
+
+  for dev in `$mlnx_mst_exec status | \
+                grep 'pciconf' | \
+                awk '{print $1}'`; do
+
+    $mlxconfig_exec -d $dev q | \
+      grep 'SRIOV' | \
+      awk '{print $2}' | \
+      grep '1' >&3 2>&1
+
+    sriov_enabled=$?
+    current_num_of_vfs=`$mlxconfig_exec -d $dev q | \
+                          grep 'NUM_OF_VFS' | \
+                          awk '{print $2}'`
+
+    if [ "x$set_nv" != "x$current_num_of_vfs" ]; then
+
+      print_debug_message "Current allowed number of VFs is '$current_num_of_vfs', required number is '$set_nv'"
+      $mlxconfig_exec -y -d $dev s SRIOV_EN=1 NUM_OF_VFS=$set_nv >&3 2>&1
+
+      [ "x$?" != 'x0' ] && \
+        print_debug_message "Failed changing number of VFs in FW for HCA ${dev}"
+
+    fi
+
+  done
+
+  mst stop >&3 2>&1
+}
+
+function check_interface_names () {
+  local in="$1"
+  local ia="$2"
+
+  is_valid_interface_name "$in" || \
+    print_error_end_exit "Specified invalid interface name '$in'"
+
+  is_valid_interface_alias_name "$ia" || \
+    print_error_end_exit "Specified invalid interface alias '$ia'"
+}
+
+function interface () {
+  local op="$1"
+  local in="$2"
+  local ia="$3"
+  local if_addr="$4"
+  local if_mask="$5"
+
+  [ "x$op" == "xunset" ] && \
+    interface_unset "$in" "$ia"
+
+  [ "x$op" == "xset" ] && \
+    interface_set "$in" "$ia" "$if_addr" "$if_mask"
+
+  [ "x$op" == "xup" -o \
+    "x$op" == "xdown" ] && \
+    interface_updown "$op" "$in" "$ia"
+}
+
+function interface_updown () {
+  local op="$1"
+  local in="$2"
+  local ia="$3"
+
+  check_interface_names "$in" "$ia"
+  local ifn="${in}:${ia}"
+
+  'if'${op} ${ifn} >&3 2>&1
+  ifconfig ${ifn} ${op} >&3 2>&1
+}
+
+function interface_unset () {
+  local in="$1"
+  local ia="$2"
+
+  if [ "x$in" != 'x' -a \
+        "x$ia" != 'x' -a \
+        is_interface_target_present ]; then
+
+    check_interface_names "$in" "$ia"
+    interface_updown 'down' "$in" "$ia"
+    local ifn="${in}:${ia}"
+
+    if [ "x$os_is_ubuntu" == 'xyes' ]; then
+      tmp_ubuntu_interfaces_file=/tmp/`basename "$ubuntu_interfaces_file"`
+
+      cat "$ubuntu_interfaces_file" 2> /dev/null | \
+          tr '\n' '|' | \
+          sed -e 's/auto/\nauto/g' \
+              -e 's/iface/\niface/g' | \
+          sed -e "/${ifn}/d" | \
+          tr '\n' '|' | \
+          sed -e 's/|auto/auto/g' \
+              -e 's/|iface/iface/g' \
+              -e 's/||*$/|/' | \
+          sed -e 's/|/\n/g' > $tmp_ubuntu_interfaces_file
+
+      {
+        rm -fv "$ubuntu_interfaces_file".save
+        mv -fv "$ubuntu_interfaces_file" "$ubuntu_interfaces_file".save
+        mv -fv "$tmp_ubuntu_interfaces_file" "$ubuntu_interfaces_file"
+      } >&3 2>&1
+    fi
+
+    [ "x$os_is_redhat" == 'xyes' -a \
+      -f $redhat_interfaces_dir/ifcfg-$ifn ] && \
+        rm -fv $redhat_interfaces_dir/ifcfg-$ifn >&3 2>&1
+
+  fi
+}
+
+function interface_set () {
+  local in="$1"
+  local ia="$2"
+  local if_addr="$3"
+  local if_mask="$4"
+
+  if [ "x$in" != 'x' -a \
+        "x$ia" != 'x' -a \
+        "x$if_addr" != 'x' -a \
+        "x$if_mask" != 'x' -a \
+        is_interface_target_present ]; then
+
+    check_interface_names "$in" "$ia"
+
+    is_valid_ip_address "$if_addr" || \
+      print_error_end_exit "Specified invalid IP address '$if_addr'"
+
+    is_valid_netmask "$if_mask" || \
+      print_error_end_exit "Specified invalid network mask '$ia'"
+
+    interface_unset "$in" "$ia"
+
+    is_interface_present "$in" || \
+      print_error_end_exit "Specified interface '$in' not present"
+
+    local ifn="$in:$ia"
+    local ifa=$if_addr
+    local ifm=$if_mask
+
+    if [ "x$os_is_ubuntu" == 'xyes' ]; then
+      {
+        printf "\nauto ${ifn}\niface ${ifn} inet static"
+        printf "\n    address ${ifa}\n    netmask ${ifm}\n"
+      } >> "$ubuntu_interfaces_file"
+    fi
+
+    if [ "x$os_is_redhat" == 'xyes' ]; then
+      {
+        printf "DEVICE=${ifn}\nONBOOT=yes\n"
+        printf "IPADDR=${ifa}\nNETMASK=${ifm}\n"
+      } > $redhat_interfaces_dir/ifcfg-$ifn
+    fi
+
+    interface_updown 'up' "$in" "$ia"
+
+  fi
+}
+
+function udev_net_rules () {
+  cat \
+      $mlnx_udev_persistent_net_rules_file \
+      $mlnx_udev_mellanox_save_rules_file 2> /dev/null | \
+    sed -e 's/#.*$//' \
+        -e 's/^ *//' \
+        -e 's/ *$//' \
+        -e '/^$/d' | \
+    while read rline; do
+
+      NAME=''
+      eline=`echo "$rline" 2> /dev/null | \
+              egrep '^.*NAME=' | \
+              sed -e 's/" *, */";/g'`
+      eval "$eline" > /dev/null 2>&1
+
+      local vendor_f="/sys/class/net/$NAME/device/vendor"
+      if [ "x$NAME" != 'x' -a \
+          -f "$vendor_f" ]; then
+
+        dev_vendor_id=`cat "$vendor_f" 2> /dev/null | \
+                        head -1 | \
+                        sed -e 's/^ *//' \
+                            -e 's/ *$//'`
+
+        if [ "x$dev_vendor_id" != "x0x$mlnx_mellanox_vendor_id" ]; then
+
+          iffound=no
+          for i in $iflist; do
+            if [ "x$i" == "x$NAME" ]; then
+              iffound=yes
+              break
+            fi
+          done
+
+          if [ "x$iffound" != 'xyes' ]; then
+            iflist+=" $NAME"
+            echo "$rline"
+          fi 
+        fi
+      fi
+    done
+}
+
+function udev_namer_build () {
+
+  local sf=${mellanox_dir_src}/${mlnx_udev_namer}/${mlnx_udev_namer}.cpp
+  local rf=${mellanox_dir_src}/${mlnx_udev_namer}/${mlnx_udev_src_file_rules}
+  local mf=${mellanox_dir_src}/${mlnx_udev_namer}/${mlnx_udev_src_file_makefile}
+  local cf=${mellanox_dir_src}/${mlnx_udev_namer}/${mlnx_udev_src_file_conf}
+
+  [ -d ${mellanox_dir_src}/${mlnx_udev_namer} ] || \
+      print_error_end_exit "Not found Mellanox UDEV namer source directory '${mellanox_dir_src}/${mlnx_udev_namer}'"
+  
+  for f in $sf \
+            $rf \
+            $mf \
+            $cf; do
+    [ -f $f ] || \
+      print_error_end_exit "Not found Mellanox UDEV namer source file '${f}'"
+  done
+
+  local bl=''
+  [ "x$os_is_ubuntu" == 'xyes' ] && \
+    bl=$(
+          dpkg \
+            --listfiles `dpkg \
+                              --get-selections | \
+                            grep 'boost' | \
+                            tr '\t' ' ' | \
+                            sed -e 's/:.*$//' \
+                                -e 's/ .*$//' | \
+                            tr '\n' ' '| \
+                            sed -e 's/  */ /'` | \
+          grep "$mlnx_udev_namer_req_boost_lib" | \
+          sort -u | \
+          head -1
+    )
+
+  [ "x$os_is_redhat" == 'xyes' ] && \
+    bl=$(
+          rpm \
+            -ql `rpm \
+                      -qa \
+                      --queryformat '%{NAME}\n' | \
+                    grep 'boost' | \
+                    tr '\n' ' '` | \
+          grep "$mlnx_udev_namer_req_boost_lib" | \
+          sort -u | \
+          head -1
+    )
+
+  [ "x$bl" == 'x' ] && \
+      print_error_end_exit "Not found installed boost library '$mlnx_udev_namer_req_boost_lib'"
+
+  local rc=1
+  {
+    export BOOST_REGEX_STATIC_LIB="$bl"
+    cd ${mellanox_dir_src}/${mlnx_udev_namer}
+    make && \
+      make install && \
+      make clean
+    rc=$?
+    cd -
+  } >&3 2>&1
+  
+  return $rc  
+}
+
+function udev_namer_enable () {
+  local em="$1"
+
+  local tf=$mlnx_udev_mellanox_namer_conf_file.tmp
+  cat $mlnx_udev_mellanox_namer_conf_file 2> /dev/null | \
+    {
+      local isf=no
+      while read line; do
+        local ieo=`echo "$line" | \
+              tr '\t' ' ' | \
+              sed -e '/^ *enable *=.*$/d'`
+
+        if [ "x$ieo" == 'x' -a "x$line" != 'x' ]; then
+          if [ "x$isf" != 'xyes' ]; then
+            echo "enable = $em"
+            isf=yes
+          fi
+
+        else
+          echo "$line"
+        fi
+      done
+
+      if [ "x$isf" != 'xyes' ]; then
+        echo
+        echo "enable = $em"
+      fi
+    } > $tf
+
+    {
+      rm -fv $mlnx_udev_mellanox_namer_conf_file
+      mv -fv $tf $mlnx_udev_mellanox_namer_conf_file
+    } >&3 2>&1
+}
+
+function udev_namer_rules () {
+  local nm="$1"
+
+  is_enable_disable 'Mellanox namer rules' "$nm"
+  nr=`udev_net_rules`
+
+  if [ "x$nm" == 'xenable' ]; then
+    {
+      udev_namer_build || \
+        print_error_end_exit "Cannot build Mellanox UDEV namer"
+      udev_namer_enable 'yes'
+      rm -fv $mlnx_udev_persistent_net_rules_file
+      ln -s /dev/null $mlnx_udev_persistent_net_rules_file
+      echo "$nr" > $mlnx_udev_mellanox_save_rules_file
+    } >&3 2>&1
+
+  else
+    {
+      udev_namer_enable 'no'
+      rm -fv $mlnx_udev_mellanox_save_rules_file
+      rm -fv $mlnx_udev_persistent_net_rules_file
+      echo "$nr" > $mlnx_udev_persistent_net_rules_file
+    } >&3 2>&1
+  fi
+
+}
+
+#-----------------------------------------------------------------------------------------------------
+[ \( "x$ubuntu_current_os_release" != "x$os_is_undefined" -a \
+  "x$redhat_current_os_release" != "x$os_is_undefined" \) -o \
+  \(  "x$ubuntu_current_os_release" == "x$os_is_undefined" -a \
+  "x$redhat_current_os_release" == "x$os_is_undefined" \) ] && \
+    print_error_end_exit "Not supported OS"
+
+case "$mlnx_cmnd" in
+
+  configure-repository-ofed)
+    configure_ofed_repository "$mlnx_prm1"
+    ;;
+
+  configure-repository-openstack)
+    configure_openstack_repository "$mlnx_prm1"
+    ;;
+
+  ofed)
+    ofed "$mlnx_prm1" "$mlnx_prm2"
+    ;;
+
+  ofed-bundle-deploy)
+    ofed_bundle_deploy "$mlnx_prm1"
+    ;;
+
+  e-ipoib)
+    e_ipoib "$mlnx_prm1"
+    ;;
+
+  e-ipoib-pre-start-delay)
+    e_ipoib_pre_start_delay "$mlnx_prm1"
+    ;;
+
+  openibd)
+    openibd "$mlnx_prm1"
+    ;;
+
+  pk-to-vlan-map)
+    pk_to_vlan_map "$mlnx_prm1" "$mlnx_prm2" "$mlnx_prm3"
+    ;;
+
+  opensmd)
+    opensmd "$mlnx_prm1"
+    ;;
+
+  mst)
+    mst "$mlnx_prm1"
+    ;;
+
+  connectx-port-config)
+    connectx_port_config "$mlnx_prm1" "$mlnx_prm2"
+    ;;
+
+  sriov)
+    sriov "$mlnx_prm1"
+    ;;
+
+  sriov-fw)
+    sriov_fw "$mlnx_prm1"
+    ;;
+
+  sysctl-conf)
+    sysctl_conf "$mlnx_prm1" "$mlnx_prm2" "$mlnx_prm3"
+    ;;
+
+  interface)
+    interface "$mlnx_prm1" "$mlnx_prm2" "$mlnx_prm3" "$mlnx_prm4" "$mlnx_prm5"
+    ;;
+
+  set-vf-type-num)
+    set_vf_type_num "$mlnx_prm1" "$mlnx_prm2" "$mlnx_prm3" "$mlnx_prm4"
+    ;;
+
+  burn-vfs-in-fw)
+    burn_vfs_in_fw "$mlnx_prm1"
+    ;;
+
+  udev-namer)
+    udev_namer_rules "$mlnx_prm1"
+    ;;
+
+  help|*)
+    rh_sups=`{ for v in ${redhat_supported_version[@]}; do printf ', %s.X' $v; done; } | sed -e 's/^, //'`
+    ub_sups=`{ for v in ${ubuntu_supported_version[@]}; do printf ', %s' $v; done; } | sed -e 's/^, //'`
+    of_sups=`{ for v in ${ofed_supported_version[@]}; do printf ', %s' $v; done; } | sed -e 's/^, //'`
+    op_sups=`{ for v in ${openstack_supported_release[@]}; do printf ', %s' $v; done; } | sed -e 's/^, //'`
+    of_spos=$(
+              {
+                for vl in ${ofed_supported_version_mapping[@]}; do
+                  echo $vl
+                done
+              } | \
+              sort | \
+              sed -e 's/,/, /g' | \
+              awk -F : '{printf("  %-7s %-6s %+s\n", $1, $2 ,$3);}' | \
+              sed -e 's/^ *./\U&/'
+    )
+    usage_message="
+Usage:
+
+  $mlnx_util help
+  $mlnx_util configure-repository-ofed <ofed-version-number>
+  $mlnx_util configure-repository-openstack <openstack-release-codename>
+  $mlnx_util ofed <install|remove> [<ofed-version-number>]
+  $mlnx_util ofed-bundle-deploy [<ofed-version-number>]
+  $mlnx_util e-ipoib <enable|disable>
+  $mlnx_util e-ipoib-pre-start-delay <num_sec>
+  $mlnx_util openibd <enable|disable|restart|stop|start>
+  $mlnx_util pk-to-vlan-map <vlan-min> <vlan-max> [<pk-min=1>]
+  $mlnx_util opensmd <enable|disable|restart|stop|start>
+  $mlnx_util mst <enable|disable|restart|stop|start>
+  $mlnx_util connectx-port-config <port_0_mode> <port_1_mode>
+  $mlnx_util sriov <enable|disable>
+  $mlnx_util sriov-fw <enable|disable>
+  $mlnx_util sysctl-conf <set|unset> <var> <val>
+  $mlnx_util interface <set|unset|up|down> <if-name> <if-alias> [<ip-address> <netmask>]
+  $mlnx_util set-vf-type-num <port_0_mode> <port_1_mode> [<num-vf> [<probe-vf>]]
+  $mlnx_util burn-vfs-in-fw <num-vf>
+  $mlnx_util udev-namer <enable|disable>
+
+Supported versions and releases:
+
+  Redhat:        $rh_sups
+  Ubuntu:        $ub_sups
+  Openstack:     $op_sups
+  OFED:          $of_sups
+
+  OFED supported by OS:
+$of_spos
+
+Supported port modes: ib|eth
+
+Notes: OS type 'Redhat' means <Redhat|Centos|Fedora>. Supported
+       Fedora release >= 12, is recognized by script as Redhat
+       v 6 for Fedora release < 20, Redhat v 7 for other Fedora
+       releases.
+"
+      [ "x$mlnx_cmnd" == 'xhelp' ] && print_message_end_exit "$usage_message"
+      print_error_end_exit "Unsupported command.
+$usage_message"
+      ;;
+esac
+
+exit 0
