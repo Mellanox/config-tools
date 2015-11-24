@@ -1,5 +1,5 @@
 #
-# Require environmernt variable BOOST_REGEX_STATIC_LIB,
+# Require environment variable BOOST_REGEX_STATIC_LIB,
 # as full path to static library 'libboost_regex.a'
 #
 

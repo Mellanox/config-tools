@@ -23,14 +23,7 @@ def mellanox_config_tools_call(option):
   if MELLANOX_TOOLS == '':
     print >> sys.stderr, 'Error requirements: not found Mellanox configuration tools'
     return 1
-  try:
-    dm = os.environ[MELLANOX_DEBUG_ENV_VAR]
-  except:
-    dm = 'no'
-  debug_output = []
-  if dm == 'yes':
-    debug_output = [MELLANOX_DEBUG_ENV_VAR + '=yes', ';']
-  call_command = debug_output + ['/bin/bash', MELLANOX_TOOLS] + option
+  call_command = ['/bin/bash', MELLANOX_TOOLS] + option
   rc = (subprocess.call(call_command) == 0)
   if not rc:
     print >> sys.stderr, 'Error call: ' + ' '.join(call_command)
@@ -274,7 +267,7 @@ class MellanoxConfigToolsUDEVNamer():
   def disable (self):
     return mellanox_udev_namer_disable()
 
-class MellanoxConfigTools():
+class MellanoxConfigTools(object):
 
   def __init__(self):
 

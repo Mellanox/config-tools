@@ -181,13 +181,13 @@ package_ofed_remove=(
 )
 
 package_ofed_pre_install=(
-        autoconf automake chrpath dpkg gcc cpp quilt swig numactl graphviz m4 make 
+        autoconf automake chrpath dpkg gcc cpp quilt swig numactl graphviz m4 make
 )
 
 if [ "x$os_is_ubuntu" == 'xyes' ]; then
   package_ofed_pre_install+=(
         autotools-dev conf debhelper dpatch libcr-dev libltdl-dev python-libxml2
-        libboost-all-dev libboost-regex-dev
+        libboost-dev libboost-regex-dev
   )
 fi
 
@@ -385,9 +385,9 @@ function is_ofed_supported () {
           is=yes
           break
         fi
-      done                      
+      done
 
-    fi        
+    fi
     [ "x$is" == "xyes" ] && break
   done
 
@@ -451,7 +451,7 @@ function is_interface_present () {
       sed -e '/[:.]/d' | \
       egrep "^${in}\$" > /dev/null 2>&1
     return $?
-  fi  
+  fi
 
   if [ "x$os_is_redhat" == 'xyes' ]; then
     ifconfig -a | \
@@ -505,9 +505,9 @@ function configure_ofed_repository () {
 
   is_os_supported $os_release
   is_ofed_supported "$ov"
-  
+
   ofed_version=$ov
-  
+
   [ "x$os_is_ubuntu" == 'xyes' ] && \
     echo "$repository_apt_ofed_template" | \
       create_repository "$repository_apt_ofed_list"
@@ -525,7 +525,7 @@ function configure_openstack_repository () {
 
   is_os_supported $os_release
   is_openstack_supported "$ov"
-  
+
   openstack_release=$ov
 
   [ "x$os_is_ubuntu" == 'xyes' ] && \
@@ -559,7 +559,7 @@ function ofed_install () {
     apt-get update >&3 2>&1
     ci='apt-get install -y --force-yes'
   fi
-    
+
   if [ "x$os_is_redhat" == 'xyes' ]; then
     yum clean all >&3 2>&1
     ci='yum install -y'
@@ -598,7 +598,7 @@ function ofed_install () {
 
   [ "x$downl_url" == 'x' ] && \
     print_error_end_exit "Ofed iso image download url not defined"
-  
+
   echo 'DOWNLOAD OFED ISO IMAGE:'
   echo "  $downl_iso"
 
@@ -609,7 +609,7 @@ function ofed_install () {
 
   [ "x$?" != "x0" ] && \
     print_error_end_exit "Cannot download Ofed iso image; $downl_url"
-  
+
   umount -f ${mlnx_ofed_install_mntdir} >&3 2>&1
   mount -o loop $mlnx_ofed_install_isodir/$downl_iso ${mlnx_ofed_install_mntdir} >&3 2>&1
 
@@ -618,7 +618,7 @@ function ofed_install () {
       umount -f ${mlnx_ofed_install_mntdir} >&3 2>&1
       print_error_end_exit "Not found Mellanox OFED installer '${mlnx_ofed_install_mntdir}/${mlnx_ofed_installer}'"
     }
-  
+
   echo 'INSTALL PREREQUIRED PACKAGES:'
   if [ "x$ci" != 'x' ]; then
     for p in ${package_ofed_pre_install[@]}; do
@@ -626,23 +626,26 @@ function ofed_install () {
       $ci $p >&3 2>&1
     done
   fi
-  
+
   echo 'INSTALL OFED PACKAGES:'
 
-  { 
+  {
     local verbose=''
-    [ "x$os_is_redhat" == 'xyes' ] && \
+    local add_kernel_support=''
+    if [ "x$os_is_redhat" == 'xyes' ]; then
       verbose='-vv'
+      add_kernel_support='--add-kernel-support'
+    fi
 
     rm -f ${mlnx_ofed_install_logdir}/${mlnx_ofed_install_errcodefile} > /dev/null 2>&1
 
     stdbuf -o0 perl ${mlnx_ofed_install_mntdir}/${mlnx_ofed_installer} \
-	              --tmpdir ${mlnx_ofed_install_logdir} \
-	              --force \
-	              --enable-sriov \
-	              --add-kernel-support \
-	              --skip-distro-check \
-	              $verbose 2>&1
+                  --tmpdir ${mlnx_ofed_install_logdir} \
+                  --force \
+                  --enable-sriov \
+                  $add_kernel_support \
+                  --skip-distro-check \
+                  $verbose 2>&1
 
     echo "${mlnx_ofed_install_errcodeprefix}$?" > ${mlnx_ofed_install_logdir}/${mlnx_ofed_install_errcodefile}
   } |& \
@@ -660,16 +663,16 @@ function ofed_install () {
         if [ "x$os_is_ubuntu" == 'xyes' ]; then
           sed -u -n '/^\(\[34m\)* *.nstalling */p' |& \
           sed -u -e 's/^\(\[34m\)* *.nstalling *//' \
-	          -e 's/[\. ]*\(\[0m\)*$//' \
-	          -e 's/^ *//' \
-	          -e '/new *packages/d' \
-	          -e 's/^/  /'
+              -e 's/[\. ]*\(\[0m\)*$//' \
+              -e 's/^ *//' \
+              -e '/new *packages/d' \
+              -e 's/^/  /'
         else
           stdbuf -o0 egrep 'rpm --nosignature -(i *-|U)vh' |& \
           sed -u -e 's|^.*/||' -e 's/\.rpm.*$//' \
               -e 's/\(\.\(x86_64\|noarch\)\)*$//' \
               -e 's/\.\(rhel[0-9]*u[0-9]*\|el[0-9]*\)$//' \
-	          -e 's/^/  /'
+              -e 's/^/  /'
         fi
       }
     fi
@@ -678,9 +681,9 @@ function ofed_install () {
   umount -f ${mlnx_ofed_install_mntdir} >&3 2>&1
 
   rc=`cat ${mlnx_ofed_install_logdir}/${mlnx_ofed_install_errcodefile} 2> /dev/null | \
-	    head -1 | \
-	    sed -n "/^${mlnx_ofed_install_errcodeprefix}/p" | \
-	    sed -e "s/^${mlnx_ofed_install_errcodeprefix}//"`
+        head -1 | \
+        sed -n "/^${mlnx_ofed_install_errcodeprefix}/p" | \
+        sed -e "s/^${mlnx_ofed_install_errcodeprefix}//"`
 
   rm -f ${mlnx_ofed_install_logdir}/${mlnx_ofed_install_errcodefile} > /dev/null 2>&1
 
@@ -691,11 +694,11 @@ function ofed_install () {
     if [ "x$mlnx_ofed_install_logdir" != 'x' -a \
           "x$mlnx_ofed_install_logdir" != 'x/' ]; then
       ls -1 ${mlnx_ofed_install_logdir} | \
-	    sed -e '/[lL][oO][gG]/d' | \
-	    while read f; do
-		  echo "  remove $f"
-		  rm -rfv ${mlnx_ofed_install_logdir}/$f > /dev/null 2>&1
-	    done
+        sed -e '/[lL][oO][gG]/d' | \
+        while read f; do
+          echo "  remove $f"
+          rm -rfv ${mlnx_ofed_install_logdir}/$f > /dev/null 2>&1
+        done
     fi
   }
 
@@ -1483,7 +1486,7 @@ function udev_net_rules () {
           if [ "x$iffound" != 'xyes' ]; then
             iflist+=" $NAME"
             echo "$rline"
-          fi 
+          fi
         fi
       fi
     done
@@ -1498,7 +1501,7 @@ function udev_namer_build () {
 
   [ -d ${mellanox_dir_src}/${mlnx_udev_namer} ] || \
       print_error_end_exit "Not found Mellanox UDEV namer source directory '${mellanox_dir_src}/${mlnx_udev_namer}'"
-  
+
   for f in $sf \
             $rf \
             $mf \
@@ -1550,8 +1553,8 @@ function udev_namer_build () {
     rc=$?
     cd -
   } >&3 2>&1
-  
-  return $rc  
+
+  return $rc
 }
 
 function udev_namer_enable () {

@@ -1,3 +1,3 @@
 
 __all__ = ['tools']
-from tools import *
+from mellanoxconfig.tools import *
