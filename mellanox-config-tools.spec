@@ -11,17 +11,17 @@
 %define         mlnx_sf_mellanox_config_tools   mellanox-config-tools
 %define         mlnx_sf_mellanoxconfig_setup    mellanoxconfig-setup.py
 
-Name:		    mellanox-%{mlnx_project_name}
-Version:	    %{?build_version}%{!?build_version:0.0.1}
-Release:	    %{?build_release}%{!?build_release:1}
-Summary:	    Mellanox Configuration Tools
-Group:		    System Environment/Base
+Name:           mellanox-%{mlnx_project_name}
+Version:        %{?build_version}%{!?build_version:0.0.1}
+Release:        %{?build_release}%{!?build_release:1}
+Summary:        Mellanox Configuration Tools
+Group:          System Environment/Base
 BuildArch:      noarch
-License:	    GPLv2+
-URL:		    https://github.com/mellanox/%{mlnx_project_name}
-Source0:	    %{mlnx_project_name}.tar.gz
+License:        GPLv2+
+URL:            https://github.com/mellanox/%{mlnx_project_name}
+Source0:        %{mlnx_project_name}.tar.gz
 
-Requires:	    python python-pip boost boost-devel boost-static
+Requires:       python python-pip boost boost-devel boost-static
 
 %description
 Mellanox Configuration Tools

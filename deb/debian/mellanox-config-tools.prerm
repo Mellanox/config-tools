@@ -1,0 +1,20 @@
+#!/bin/bash
+                     os_usr_bin=/usr/bin
+                       mlnx_bin=/opt/mellanox/bin
+                       mlnx_src=/opt/mellanox/src
+  mlnx_sf_mellanox_config_tools=mellanox-config-tools
+        mlnx_sf_mlnx_udev_namer=mlnx-udev-namer
+             mlnx_python_module=MellanoxConfig
+{
+  ${mlnx_bin}/${mlnx_sf_mellanox_config_tools} \
+    udev-namer disable
+
+  [ -f ${mlnx_bin}/${mlnx_sf_mlnx_udev_namer} ] && \
+    rm -f ${mlnx_bin}/${mlnx_sf_mlnx_udev_namer}
+
+  [ -f ${os_usr_bin}/${mlnx_sf_mellanox_config_tools} -o \
+    -L ${os_usr_bin}/${mlnx_sf_mellanox_config_tools} ] && \
+      rm -f ${os_usr_bin}/${mlnx_sf_mellanox_config_tools}
+
+  pip uninstall -y ${mlnx_python_module}
+} > /dev/null 2>&1

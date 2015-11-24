@@ -1,0 +1,10 @@
+Source: mellanox-config-tools
+Maintainer: Mellanox Openstack <openstack@mellanox.com>
+Section: Ofed
+Priority: optional
+Standards-Version: 3.9.3
+
+Package: mellanox-config-tools
+Architecture: all
+Description: Mellanox Config Tools
+Depends: cpp, libboost-dev, libboost-regex-dev, python, python-pip

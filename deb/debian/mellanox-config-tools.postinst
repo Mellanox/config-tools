@@ -1,0 +1,24 @@
+#!/bin/bash
+                     os_usr_bin=/usr/bin
+                       mlnx_bin=/opt/mellanox/bin
+                       mlnx_src=/opt/mellanox/src
+  mlnx_sf_mellanox_config_tools=mellanox-config-tools
+         mlnx_sd_mellanoxconfig=mellanoxconfig
+   mlnx_sf_mellanoxconfig_setup=mellanoxconfig-setup.py
+{
+  [ -f ${os_usr_bin}/${mlnx_sf_mellanox_config_tools} -o \
+    -L ${os_usr_bin}/${mlnx_sf_mellanox_config_tools} ] && \
+      rm -f ${os_usr_bin}/${mlnx_sf_mellanox_config_tools}
+
+  ln -s ${mlnx_bin}/${mlnx_sf_mellanox_config_tools} \
+    ${os_usr_bin}/${mlnx_sf_mellanox_config_tools}
+
+  if [ -d ${mlnx_src} -a \
+        -d ${mlnx_src}/${mlnx_sd_mellanoxconfig} -a \
+        -f ${mlnx_src}/${mlnx_sf_mellanoxconfig_setup} ]; then
+      cd ${mlnx_src}
+      python ${mlnx_sf_mellanoxconfig_setup} install
+      python ${mlnx_sf_mellanoxconfig_setup} clean --all
+      cd -
+  fi
+} > /dev/null 2>&1
