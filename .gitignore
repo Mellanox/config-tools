@@ -1,0 +1,4 @@
+.repo-update.sh
+.deb-update.sh
+*.deb
+*.changes

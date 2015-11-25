@@ -83,36 +83,43 @@ mellanox_ofed_version_deploy=ofed-deploy
 
 repository_apt_openstack_list=/etc/apt/sources.list.d/mellanox-openstack-repository.list
 repository_apt_ofed_list=/etc/apt/sources.list.d/mellanox-ofed-repository.list
+
 repository_yum_openstack_repo=/etc/yum.repos.d/mellanox-openstack-repository.repo
 repository_yum_ofed_repo=/etc/yum.repos.d/mellanox-ofed-repository.repo
+
 repository_base_url=http://bgate.mellanox.com/openstack
+repository_base_ubuntu=/repository/ubuntu
+repository_base_redhat=/repository/redhat
+repository_base_ofed=/repository/ofed
+
 repository_name_openstack=openstack-mellanox
 repository_name_ofed=ofed-mellanox
-repository_apt_component_openstack=main
-repository_apt_component_ofed=main
+repository_apt_component_openstack=openstack-mellanox
+repository_apt_component_ofed=ofed-mellanox
 
 repository_title_openstack='Mellanox Openstack Repository'
 repository_title_ofed='Mellanox OFED Repository'
 
+
 repository_apt_openstack_template="# ${repository_title_openstack}
-deb [arch=amd64] <%MLNX_BASE_URL%>/<%OPENSTACK_RELEASE%>/ubuntu/<%OS_RELEASE%> <%MLNX_REPO_NAME_OPENSTACK%> <%MLNX_REPO_COMP_OPENSTACK%>"
+deb [arch=amd64] <%MLNX_BASE_URL%>${repository_base_ubuntu} <%MLNX_REPO_COMP_OPENSTACK%> <%OS_RELEASE%>-openstack-<%OPENSTACK_RELEASE%>"
 
 repository_apt_ofed_template="# ${repository_title_ofed}
-deb [arch=amd64] <%MLNX_BASE_URL%>/ofed-cloud/<%OFED_VERSION%>/ubuntu/<%OS_RELEASE%> <%MLNX_REPO_NAME_OFED%> <%MLNX_REPO_COMP_OFED%>"
+deb [arch=amd64] <%MLNX_BASE_URL%>${repository_base_ubuntu} <%MLNX_REPO_COMP_OFED%> <%OS_RELEASE%>-ofed-<%OFED_VERSION%>"
 
 repository_yum_openstack_template="[<%MLNX_REPO_NAME_OPENSTACK%>]
 name=${repository_title_openstack}
-baseurl=<%MLNX_BASE_URL%>/<%OPENSTACK_RELEASE%>/redhat/<%OS_RELEASE%>
+baseurl=<%MLNX_BASE_URL%>${repository_base_redhat}/<%OS_RELEASE%>-openstack-<%OPENSTACK_RELEASE%>
 enabled=1
 gpgcheck=0"
 
 repository_yum_ofed_template="[<%MLNX_REPO_NAME_OFED%>]
 name=${repository_title_ofed}
-baseurl=<%MLNX_BASE_URL%>/ofed-cloud/<%OFED_VERSION%>/redhat/<%OS_RELEASE%>
+baseurl=<%MLNX_BASE_URL%>${repository_base_redhat}/<%OS_RELEASE%>-ofed-<%OFED_VERSION%>
 enabled=1
 gpgcheck=0"
 
-repository_iso_url=${repository_base_url}/ofed-cloud/iso/
+repository_iso_url=${repository_base_url}/${repository_base_ofed}/
 iso_prefix_image='MLNX_OFED_LINUX'
 iso_prefix_ubuntu='ubuntu'
 iso_prefix_redhat='rhel'
@@ -204,18 +211,18 @@ package_ofed_post_install=(
 mlnx_opensm_exec=/usr/sbin/opensm
 mlxconfig_exec=/usr/bin/mlxconfig
 mlnx_mst_exec=/usr/bin/mst
+mlnx_connectx_port_config_exec=/sbin/connectx_port_config
 
 mlnx_openib_conf=/etc/infiniband/openib.conf
 mlnx_opensm_conf=/etc/opensm/opensm.conf
 mlnx_opensm_create_config_option='--allow_both_pkeys  --priority 1 --create-config'
 mlnx_opensm_partitions_conf=/etc/opensm/partitions.conf
 
-mlnx_connectx_port_config_exec=/sbin/connectx_port_config
 default_grub=/etc/default/grub
 
-mlnx_fw_sriov_home=/opt/mellanox/mlnx-fw-updater/firmware
-mlnx_fw_sriov_disable=$mlnx_fw_sriov_home/mlxfwmanager_sriov_dis_x86_64
-mlnx_fw_sriov_enable=$mlnx_fw_sriov_home/mlxfwmanager_sriov_en_x86_64
+mlnx_fw_sriov_home=$mellanox_dir_home/mlnx-fw-updater/firmware
+mlnx_fw_sriov_disable=mlxfwmanager_sriov_dis_x86_64
+mlnx_fw_sriov_enable=mlxfwmanager_sriov_en_x86_64
 
 sysctl_conf_no_apply=no
 sysctl_conf_file=/etc/sysctl.conf
@@ -716,8 +723,8 @@ function ofed_install () {
     {
       mkdir -pv $mlnx_fw_sriov_home
 
-      for f in mlxfwmanager_sriov_dis_x86_64 \
-                mlxfwmanager_sriov_en_x86_64; do
+      for f in $mlnx_fw_sriov_disable \
+                $mlnx_fw_sriov_enable; do
 
         if [ -f ${mlnx_ofed_install_mntdir}/firmware/$f ]; then
           [ -f $mlnx_fw_sriov_home/$f ] && rm -fv $mlnx_fw_sriov_home/$f
@@ -750,8 +757,8 @@ function ofed_remove () {
   fi
 
   {
-    for f in mlxfwmanager_sriov_dis_x86_64 \
-              mlxfwmanager_sriov_en_x86_64; do
+    for f in $mlnx_fw_sriov_disable \
+              $mlnx_fw_sriov_enable; do
       [ -f $mlnx_fw_sriov_home/$f ] && rm -fv $mlnx_fw_sriov_home/$f
     done
   } >&3 2>&1
@@ -1143,8 +1150,8 @@ function sriov_fw () {
   local sriov_mode="$1"
   is_enable_disable 'SRIOV' "$sriov_mode"
 
-  fw_update_exec=$mlnx_fw_sriov_disable
-  [ "x$sriov_mode" == 'xenable' ] && fw_update_exec=$mlnx_fw_sriov_enable
+  fw_update_exec=$mlnx_fw_sriov_home/$mlnx_fw_sriov_disable
+  [ "x$sriov_mode" == 'xenable' ] && fw_update_exec=$mlnx_fw_sriov_home/$mlnx_fw_sriov_enable
 
   [ -x "$fw_update_exec" ] || \
       print_error_end_exit "Not found required executable file '$fw_update_exec'"
