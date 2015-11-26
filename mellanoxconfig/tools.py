@@ -143,6 +143,12 @@ def mellanox_udev_namer_enable():
 def mellanox_udev_namer_disable():
   return mellanox_config_tools_call(['udev-namer', 'disable'])
 
+def mellanox_udev_namer_config_set(var, val):
+  return mellanox_config_tools_call(['udev-namer-config', 'set', str(var), str(val)])
+
+def mellanox_udev_namer_config_unset(var):
+  return mellanox_config_tools_call(['udev-namer-config', 'unset', str(var)])
+
 class MellanoxConfigToolsService():
 
   def __init__(self, srv):
@@ -266,6 +272,12 @@ class MellanoxConfigToolsUDEVNamer():
 
   def disable (self):
     return mellanox_udev_namer_disable()
+
+  def set (self, var, val):
+    return mellanox_udev_namer_config_set(var, val)
+
+  def unset (self, var):
+    return mellanox_udev_namer_config_unset(var)
 
 class MellanoxConfigTools(object):
 

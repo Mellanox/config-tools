@@ -78,6 +78,7 @@ mellanox_dir_bin=$mellanox_dir_home/bin
 mellanox_dir_var=$mellanox_dir_home/var
 mellanox_dir_src=$mellanox_dir_home/src
 mellanox_dir_install=$mellanox_dir_home/install
+apt_get_update_disable=apt-get-update-disable
 mellanox_config_util=/usr/bin/$mlnx_config
 mellanox_ofed_version_deploy=ofed-deploy
 
@@ -184,11 +185,12 @@ package_ofed_remove=(
         mft-devmon mft-devmondb mft-int mft-tests mstflint mxm fca openmpi
         openshmem mpitests knem knem-dkms ummunotify ummunotify-dkms libvma
         mlnx-en srptools iser-dkms isert-dkms srp-dkms libmthca-dev libmthca1
-        libmthca1-dbg
+        libmthca1-dbg ibsim-doc
 )
 
 package_ofed_pre_install=(
-        autoconf automake chrpath dpkg gcc cpp quilt swig numactl graphviz m4 make
+        autoconf automake chrpath dpkg gcc cpp quilt swig numactl graphviz
+        m4 make upstart
 )
 
 if [ "x$os_is_ubuntu" == 'xyes' ]; then
@@ -481,6 +483,57 @@ function is_interface_target_present () {
   return 1
 }
 
+function is_supported_udev_namer_config_variable () {
+ echo "$1" | \
+    egrep '^(enable|generate_eipoib_mac_address|prefix_eipoib_mac_address|prefix_infiniband|prefix_ethernet|prefix_eipoib|prefix_port|prefix_virtfn)$' > /dev/null 2>&1
+
+  [ "x$?" != 'x0' ] && \
+    print_error_end_exit "Not supported by Mellanox UDEV namer config file variable '$1'"
+}
+
+function is_supported_udev_namer_config_variable_value () {
+  local var="$1"
+  local val="$2"
+
+  is_supported_udev_namer_config_variable "$var"
+
+  local rc=1
+  case "$var" in
+
+    enable|generate_eipoib_mac_address)
+      echo "$val" | \
+        egrep -i '^(true|yes|false|no)$' > /dev/null 2>&1
+      rc=$?
+      ;;
+
+    prefix_eipoib_mac_address)
+      echo "$val" | \
+        egrep -i '^(([a-f[:digit:]]{2})(:)){0,3}([a-f[:digit:]]){1,2}$' > /dev/null 2>&1
+      rc=$?
+      ;;
+
+    prefix_infiniband|prefix_ethernet|prefix_eipoib)
+      echo "$val" | \
+        egrep -i '^[a-z]([a-z[:digit:]_]|-){0,3}$' > /dev/null 2>&1
+      rc=$?
+      ;;
+
+    prefix_port|prefix_virtfn)
+      echo "$val" | \
+        egrep -i '^[a-z]{1,2}$' > /dev/null 2>&1
+      rc=$?
+      ;;
+
+    *)
+      ;;
+  esac
+
+  [ "x$rc" != 'x0' ] && \
+    print_error_end_exit "Not supported by Mellanox UDEV namer config file value '$val' of variable '$var'"
+
+  return 0
+}
+
 function create_repository () {
   local r="$1"
 
@@ -636,6 +689,28 @@ function ofed_install () {
 
   echo 'INSTALL OFED PACKAGES:'
 
+  local cur_ag=`which apt-get 2> /dev/null`
+  if [ "x$os_is_ubuntu" == 'xyes' -a \
+        "x$cur_ag" != 'x' ]; then
+    {
+      echo "#!/bin/bash"
+      echo "[ \"x\$1\" == 'xupdate' ] && exit 0"
+      echo "$cur_ag.save \$@ > /dev/null 2>&1"
+      echo "exit \$?"
+    } > ${mellanox_dir_install}/$apt_get_update_disable
+
+    chmod +x ${mellanox_dir_install}/$apt_get_update_disable
+    [ -f $cur_ag.save ] || \
+      {
+        rm -fv $cur_ag.save
+        cp -fv $cur_ag $cur_ag.save
+      } >&3 2>&1
+    {
+      rm -fv $cur_ag
+      ln -s ${mellanox_dir_install}/$apt_get_update_disable $cur_ag
+    } >&3 2>&1
+  fi
+
   {
     local verbose=''
     local add_kernel_support=''
@@ -684,6 +759,15 @@ function ofed_install () {
       }
     fi
   }
+
+  if [ "x$os_is_ubuntu" == 'xyes' -a \
+        "x$cur_ag" != 'x' ]; then
+    {
+      rm -fv $cur_ag
+      mv -fv $cur_ag.save $cur_ag
+      rm -fv ${mellanox_dir_install}/$apt_get_update_disable
+    } >&3 2>&1
+  fi
 
   umount -f ${mlnx_ofed_install_mntdir} >&3 2>&1
 
@@ -932,6 +1016,7 @@ function service_mgm () {
       ;;
   esac
 }
+
 
 function initctl_mgm () {
   local sn="$1"
@@ -1265,7 +1350,7 @@ function set_vf_type_num () {
   port_type_array_string=" port_type_array=$p0t,$p1t"
 
   nv_string=''
-  [ "x$set_nv" != 'x0' ] && nv_string=" num_vf=$set_nv"
+  [ "x$set_nv" != 'x0' ] && nv_string=" num_vfs=$set_nv"
 
   npv_string=''
   [ "x$set_npv" != 'x0' ] && npv_string=" probe_vf=$set_npv"
@@ -1550,6 +1635,17 @@ function udev_namer_build () {
   [ "x$bl" == 'x' ] && \
       print_error_end_exit "Not found installed boost library '$mlnx_udev_namer_req_boost_lib'"
 
+  local cf_present=no
+  [ -f $mlnx_udev_mellanox_namer_conf_file ] && \
+    cf_present=yes
+
+  if [ "x$cf_present" == 'xyes' ]; then
+    {
+      rm -fv $mlnx_udev_mellanox_namer_conf_file.save
+      cp -fv $mlnx_udev_mellanox_namer_conf_file $mlnx_udev_mellanox_namer_conf_file.save
+    } >&3 2>&1
+  fi
+
   local rc=1
   {
     export BOOST_REGEX_STATIC_LIB="$bl"
@@ -1561,11 +1657,41 @@ function udev_namer_build () {
     cd -
   } >&3 2>&1
 
+  if [ "x$cf_present" == 'xyes' ]; then
+    {
+      rm -fv $mlnx_udev_mellanox_namer_conf_file
+      mv -fv $mlnx_udev_mellanox_namer_conf_file.save $mlnx_udev_mellanox_namer_conf_file
+    } >&3 2>&1
+  fi
+
+  local fn=dev_port
+  [ \( "x$os_is_ubuntu" == 'xyes' -a \
+      "x$os_release" == 'x14.04' \) -o \
+    \( "x$os_is_redhat" == 'xyes' -a \
+      "x$os_release" == 'x6' \) ] && \
+       fn=dev_id
+
   return $rc
 }
 
 function udev_namer_enable () {
-  local em="$1"
+  udev_namer_config 'set' 'enable' "$1"
+}
+
+function udev_namer_config () {
+  local op="$1"
+  local var="$2"
+  local val="$3"
+
+  [ "x$op" == 'xset' -o \
+     "x$op" == 'xunset' ] || \
+      print_error_end_exit "Not supported by Mellanox UDEV namer config command '$op', use <set|unset>"
+
+  [ "x$op" == 'xunset' ] && \
+    is_supported_udev_namer_config_variable "$var"
+
+  [ "x$op" == 'xset' ] && \
+    is_supported_udev_namer_config_variable_value "$var" "$val"
 
   local tf=$mlnx_udev_mellanox_namer_conf_file.tmp
   cat $mlnx_udev_mellanox_namer_conf_file 2> /dev/null | \
@@ -1573,12 +1699,16 @@ function udev_namer_enable () {
       local isf=no
       while read line; do
         local ieo=`echo "$line" | \
-              tr '\t' ' ' | \
-              sed -e '/^ *enable *=.*$/d'`
+                     tr '\t' ' ' | \
+                     sed -e "/^ *$var *=.*\\\$/d"`
 
-        if [ "x$ieo" == 'x' -a "x$line" != 'x' ]; then
+        if [ "x$ieo" == 'x' -a \
+              "x$line" != 'x' ]; then
+
           if [ "x$isf" != 'xyes' ]; then
-            echo "enable = $em"
+            if [ "x$op" == 'xset' ]; then
+              echo "$var = $val"
+            fi
             isf=yes
           fi
 
@@ -1588,8 +1718,10 @@ function udev_namer_enable () {
       done
 
       if [ "x$isf" != 'xyes' ]; then
-        echo
-        echo "enable = $em"
+        if [ "x$op" == 'xset' ]; then
+          echo
+          echo "$var = $val"
+        fi
       fi
     } > $tf
 
@@ -1623,7 +1755,6 @@ function udev_namer_rules () {
       echo "$nr" > $mlnx_udev_persistent_net_rules_file
     } >&3 2>&1
   fi
-
 }
 
 #-----------------------------------------------------------------------------------------------------
@@ -1707,6 +1838,10 @@ case "$mlnx_cmnd" in
     udev_namer_rules "$mlnx_prm1"
     ;;
 
+  udev-namer-config)
+    udev_namer_config "$mlnx_prm1" "$mlnx_prm2" "$mlnx_prm3"
+    ;;
+
   help|*)
     rh_sups=`{ for v in ${redhat_supported_version[@]}; do printf ', %s.X' $v; done; } | sed -e 's/^, //'`
     ub_sups=`{ for v in ${ubuntu_supported_version[@]}; do printf ', %s' $v; done; } | sed -e 's/^, //'`
@@ -1745,6 +1880,7 @@ Usage:
   $mlnx_util set-vf-type-num <port_0_mode> <port_1_mode> [<num-vf> [<probe-vf>]]
   $mlnx_util burn-vfs-in-fw <num-vf>
   $mlnx_util udev-namer <enable|disable>
+  $mlnx_util udev-namer-config <set|unset> <variable> [<value>]
 
 Supported versions and releases:
 

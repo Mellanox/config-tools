@@ -192,11 +192,12 @@ void config_read_from_file(udev_namer_config& conf)
     conf_file.close();
     boost::property_tree::ptree pt;
     boost::property_tree::ini_parser::read_ini(CONFIG_FILE, pt);
-    
+
     config_get_bool_value_from_file(pt, conf.enable, CONFIG_VARIABLE_ENABLE);
 
     if (conf.enable)
     {
+
       config_get_bool_value_from_file
       (
         pt,
@@ -301,7 +302,7 @@ string read_link(const char* f)
     buffer[len] = '\0';
     rs.assign(buffer);
   }
-  return rs;    
+  return rs;
 }
 
 //-------------------------------------------------------------------------------------------------------------------------------
@@ -312,12 +313,12 @@ bool param_read(udev_namer_config& conf, udev_namer_param& param)
 
   if (devpath == NULL)
         return false;
-  
+
   boost::cmatch m;
 
   if (! boost::regex_match(devpath, m, REGEX_ENV_DEVPATH))
         return false;
-  
+
   param.path.bus        = boost::lexical_cast<string>(m[2]);
   param.path.type       = boost::lexical_cast<string>(m[5]);
   param.path.interface  = boost::lexical_cast<string>(m[7]);
@@ -328,18 +329,25 @@ bool param_read(udev_namer_config& conf, udev_namer_param& param)
   param.path.value.assign(devpath);
   string string_form_file;
 
-  if ( ! read_string_from_file((UDEV_DIR_SYS_PCI_DEVICES + "/" + param.path.bus + "/" + UDEV_FILE_VENDOR).c_str(), string_form_file) || 
+  if ( ! read_string_from_file((UDEV_DIR_SYS_PCI_DEVICES + "/" + param.path.bus + "/" + UDEV_FILE_VENDOR).c_str(), string_form_file) ||
     string_form_file != "0x" + UDEV_DEV_VENDOR_ID)
         return param_set_default(param);
 
+  bool is_port_num_read_error = true;
+  param.port.num = 0;
   if (read_string_from_file((UDEV_DIR_SYS_CLASS_NET + "/" + param.path.interface + "/" + UDEV_FILE_DEVICE_PORT).c_str(), string_form_file))
-    param.port.num = atoi(string_form_file.c_str());
-  else if (read_string_from_file((UDEV_DIR_SYS_CLASS_NET + "/" + param.path.interface + "/" + UDEV_FILE_DEVICE_ID).c_str(), string_form_file))
-    param.port.num = strtol(string_form_file.c_str(), NULL, 16);
-  else  
-        return param_set_default(param);
+  {
+    is_port_num_read_error = false;
+    param.port.num += atoi(string_form_file.c_str());
+  }
 
-  if (param.port.num < 0 || param.port.num > conf.limit.port)        
+  if (read_string_from_file((UDEV_DIR_SYS_CLASS_NET + "/" + param.path.interface + "/" + UDEV_FILE_DEVICE_ID).c_str(), string_form_file))
+  {
+    is_port_num_read_error = false;
+    param.port.num += strtol(string_form_file.c_str(), NULL, 16);
+  }
+
+  if (is_port_num_read_error || param.port.num > conf.limit.port)
         return param_set_default(param);
 
   if ( ! read_string_from_file((UDEV_DIR_SYS_CLASS_NET + "/" + param.path.interface + "/" + UDEV_FILE_TYPE).c_str(), string_form_file) ||
@@ -351,11 +359,11 @@ bool param_read(udev_namer_config& conf, udev_namer_param& param)
   ss << UDEV_DIR_SYS_PCI_DEVICES << "/" << param.path.bus << "/" << UDEV_FILE_PORT_PREFIX << param.port.num + 1;
   if ( ! read_string_from_file(ss.str().c_str(), string_form_file))
         return param_set_default(param);
-  
-  if (boost::regex_match(string_form_file.c_str(), REGEX_PHYS_LINK_LAYER_IS_ETH)) param.port.link.bus_type = UDEV_DEV_LINK_TYPE_ETHERNET; 
+
+  if (boost::regex_match(string_form_file.c_str(), REGEX_PHYS_LINK_LAYER_IS_ETH)) param.port.link.bus_type = UDEV_DEV_LINK_TYPE_ETHERNET;
 
   if (param.port.link.bus_type == UDEV_DEV_NOT_DEFINED &&
-    boost::regex_match(string_form_file.c_str(), REGEX_PHYS_LINK_LAYER_IS_IB)) param.port.link.bus_type = UDEV_DEV_LINK_TYPE_INFINIBAND; 
+    boost::regex_match(string_form_file.c_str(), REGEX_PHYS_LINK_LAYER_IS_IB)) param.port.link.bus_type = UDEV_DEV_LINK_TYPE_INFINIBAND;
 
   if (param.port.link.bus_type == UDEV_DEV_NOT_DEFINED)
         return param_set_default(param);
@@ -412,7 +420,7 @@ bool param_read(udev_namer_config& conf, udev_namer_param& param)
     if (dev_pci_bus != "." &&
       dev_pci_bus != ".." &&
       read_string_from_file((UDEV_DIR_SYS_PCI_DEVICES + "/" + dev_pci_bus + "/" + UDEV_FILE_VENDOR).c_str(), string_form_file) &&
-      string_form_file == "0x" + UDEV_DEV_VENDOR_ID && 
+      string_form_file == "0x" + UDEV_DEV_VENDOR_ID &&
       ! read_string_from_file((UDEV_DIR_SYS_PCI_DEVICES + "/" + dev_pci_bus + "/" + UDEV_LINK_PHYS_FN + "/" + UDEV_FILE_SRIOV_NUMVFS).c_str(), string_form_file))
     {
       if (j++ >= conf.limit.card) break;
@@ -497,9 +505,9 @@ int main()
     if (conf.prefix.eipoib_mac_address.enable && param.virtfn.num != UDEV_DEV_NOT_DEFINED)
       interface_set_mac_address(param.path.interface, generate_eipoib_mac_address(conf.prefix.eipoib_mac_address.value));
   }
-  
+
   ss << param.card.num << conf.prefix.port << param.port.num;
-  
+
   if (param.virtfn.num != UDEV_DEV_NOT_DEFINED)
     ss << conf.prefix.virtfn << param.virtfn.num;
 
