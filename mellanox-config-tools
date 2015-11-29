@@ -20,6 +20,8 @@ MLNX_POST_DEPLOY_DELAY=5
 
 #-----------------------------------------------------------------------------------------------------
 mlnx_util=`basename "$0"`
+mlnx_script=$(readlink -f "$0")
+mlnx_script_path=`dirname $mlnx_script`
 mlnx_config='mellanox-config-tools'
 
 os_is_undefined='Undefined'
@@ -406,6 +408,33 @@ function is_ofed_supported () {
   return 0
 }
 
+function is_ofed_installed_version () {
+  local ov="$1"
+  local fi="$2"
+
+  [ "x$ov" == 'x' ] && \
+    print_error_end_exit "Not specified required value of OFED version"
+
+  [ "x$fi" != 'x' -a \
+    "x$fi" != 'xforce' ] && \
+      print_error_end_exit "Please use option 'force' for force OFED installation"
+
+  local oi=''
+  [ "x$fi" != 'xforce' ] && \
+    oi=`ofed_info 2> /dev/null | \
+          head -1 | \
+              tr '\t' ' '| \
+              sed -e 's/  */ /g' | \
+              tr ' ' '\n'| \
+              head -1 | \
+              sed -e 's/^\(\([[:alpha:]_]\|\-\)*\)\(.*\)$/\3/' \
+                  -e 's/:*$//' | \
+              sed -n '/^[[:digit:]]\+\.[[:digit:]]\+\-[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+$/p'`
+
+  [ "x$ov" == "x$oi" ] && \
+    print_message_end_exit "Ofed=${ov} already installed"
+}
+
 function is_ofed_v_X () {
   local ovs="$1"
   local ovn="$2"
@@ -599,6 +628,7 @@ function configure_openstack_repository () {
 
 function ofed_install () {
   local ov="$1"
+  local fi="$2"
   local ci=''
 
   [ "x$ov" == 'x' ] && ov=$ofed_default_version
@@ -606,6 +636,9 @@ function ofed_install () {
 
   is_os_supported "$os_release"
   is_ofed_supported "$ov"
+  is_ofed_installed_version "$ov" "$fi"
+
+  ofed_remove
 
   local is_ofed_v2=no
   is_ofed_v_X "$ov" 2 && \
@@ -850,9 +883,11 @@ function ofed_remove () {
 
 function ofed_bundle_deploy () {
   local ov="$1"
+  local fi="$2"
 
   [ "x$ov" == 'x' ] && ov=$ofed_default_version
   is_ofed_supported "$ov"
+  is_ofed_installed_version "$ov" "$fi"
 
   local mode_e_ipoib=disable
   [ "x$MLNX_DEPLOY_ENABLE_E_IPOIB" == 'xyes' ] && mode_e_ipoib=enable
@@ -907,13 +942,19 @@ function ofed_bundle_deploy () {
 function ofed () {
   local oc="$1"
   local ov="$2"
+  local fi="$3"
 
   [ "x$oc" != 'xinstall' -a \
     "x$oc" != 'xremove' ] && \
       print_error_end_exit "Not supported ofed command '$oc', use install|remove"
 
-  ofed_remove
-  [ "x$oc" == 'xinstall' ] && ofed_install "$ov"
+  [ "x$oc" == 'xinstall' -a \
+    "x$fi" != 'x' -a \
+    "x$fi" != 'xforce' ] && \
+      print_error_end_exit "Please use option 'force' for force install OFED"
+
+  [ "x$oc" == 'xremove' ] && ofed_remove
+  [ "x$oc" == 'xinstall' ] && ofed_install "$ov" "$fi"
 }
 
 function e_ipoib () {
@@ -1775,11 +1816,11 @@ case "$mlnx_cmnd" in
     ;;
 
   ofed)
-    ofed "$mlnx_prm1" "$mlnx_prm2"
+    ofed "$mlnx_prm1" "$mlnx_prm2" "$mlnx_prm3"
     ;;
 
   ofed-bundle-deploy)
-    ofed_bundle_deploy "$mlnx_prm1"
+    ofed_bundle_deploy "$mlnx_prm1" "$mlnx_prm2"
     ;;
 
   e-ipoib)
@@ -1864,8 +1905,8 @@ Usage:
   $mlnx_util help
   $mlnx_util configure-repository-ofed <ofed-version-number>
   $mlnx_util configure-repository-openstack <openstack-release-codename>
-  $mlnx_util ofed <install|remove> [<ofed-version-number>]
-  $mlnx_util ofed-bundle-deploy [<ofed-version-number>]
+  $mlnx_util ofed <install|remove> [<ofed-version-number>] [force]
+  $mlnx_util ofed-bundle-deploy [<ofed-version-number>] [force]
   $mlnx_util e-ipoib <enable|disable>
   $mlnx_util e-ipoib-pre-start-delay <num_sec>
   $mlnx_util openibd <enable|disable|restart|stop|start>
