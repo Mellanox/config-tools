@@ -29,16 +29,16 @@ def mellanox_config_tools_call(option):
     print >> sys.stderr, 'Error call: ' + ' '.join(call_command)
   return rc
 
-def mellanox_configure_repository_ofed(version=None):
+def mellanox_configure_repository_ofed(version=''):
   return mellanox_config_tools_call(['configure-repository-ofed', str(version)])
 
 def mellanox_configure_repository_openstack(version='kilo'):
   return mellanox_config_tools_call(['configure-repository-openstack', str(version)])
 
-def mellanox_ofed_install(version=None):
+def mellanox_ofed_install(version=''):
   return mellanox_config_tools_call(['ofed', 'install', str(version)])
 
-def mellanox_ofed_bundle_deploy(version=None):
+def mellanox_ofed_bundle_deploy(version=''):
   return mellanox_config_tools_call(['ofed-bundle-deploy', str(version)])
 
 def mellanox_ofed_remove():
@@ -182,7 +182,7 @@ class MellanoxConfigToolsOpensmdService(MellanoxConfigToolsService):
 
 class MellanoxConfigToolsRepository():
 
-  def ofed (self, version=None):
+  def ofed (self, version=''):
     return mellanox_configure_repository_ofed(version)
 
   def openstack (self, version='kilo'):
@@ -190,10 +190,10 @@ class MellanoxConfigToolsRepository():
 
 class MellanoxConfigToolsOfed():
 
-  def install (self, version=None):
+  def install (self, version=''):
     return mellanox_ofed_install(version)
 
-  def bundle_deploy (self, version=None):
+  def bundle_deploy (self, version=''):
     return mellanox_ofed_bundle_deploy(version)
 
   def remove (self):

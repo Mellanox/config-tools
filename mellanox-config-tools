@@ -197,8 +197,9 @@ package_ofed_pre_install=(
 
 if [ "x$os_is_ubuntu" == 'xyes' ]; then
   package_ofed_pre_install+=(
-        autotools-dev conf debhelper dpatch libcr-dev libltdl-dev python-libxml2
-        libboost-dev libboost-regex-dev
+        autotools-dev conf debhelper dpatch libcr-dev libltdl-dev
+        python-libxml2 libboost-dev libboost-regex-dev tcl8.4 tcl8.4
+        tk8.4 tk8.4-dev
   )
 fi
 
@@ -626,6 +627,111 @@ function configure_openstack_repository () {
       create_repository "$repository_yum_openstack_repo"
 }
 
+function redhat_install_rpm_deps () {
+  local rpmdir="$1"
+  local plist=''
+  local preqs=''
+
+  [ "x$os_is_redhat" != 'xyes' ] && \
+    return 0
+
+  return 0
+}
+
+function ubuntu_install_deb_deps () {
+  local debdir="$1"
+  local plist=''
+  local preqs=''
+
+  [ "x$os_is_ubuntu" != 'xyes' ] && \
+    return 0
+
+  package_list=$(
+                 find "$debdir/DEPS/" \
+                  -type f \
+                  -name '*.deb' \
+                  -exec dpkg -I {} \; 2> /dev/null | \
+                 egrep '(Depends|Package):' | \
+                 tr '\t' ' ' | \
+                 sed -e 's/([^(]*)//g' \
+                     -e 's/ *\, */,/g' \
+                     -e 's/ *Package: */|/g' \
+                     -e 's/ *Depends: */:/g' | \
+                 tr -d '\n' | \
+                 tr '|' '\n' | \
+                 sed -e "s/^ *//" \
+                     -e "s/ *\$//" \
+                     -e "/^\$/d" \
+                     -e "s/^/package_name=/" \
+                     -e "s/:/;package_deps=/" \
+                     -e "s/\$/;/"
+                 echo
+  )
+
+  local package_name=''
+  local package_deps=''
+  for eline in $package_list; do
+    package_name=''
+    package_deps=''
+    eval "$eline" > /dev/null
+    plist+=" $package_name"
+    preqs+=$(echo " $package_deps" | sed -e 's/,/ /g')
+  done
+
+  plist=`echo "$plist" | \
+           tr ' ' '\n' | \
+           sort -u | \
+           tr '\n' ' '`
+
+  preqs=$(
+           {
+             printf "$preqs "
+             cat ${mlnx_ofed_install_mntdir}/${mlnx_ofed_installer} 2> /dev/null | \
+               tr '\t' ' ' | \
+               egrep '(dist_req_build|dist_req_inst) *=' | \
+               sed -e 's/^.*=> *\[//g' \
+                   -e 's/\]//g' \
+                   -e 's/[",]/ /g' \
+                   -e 's/  */ /g' \
+                   -e 's/^ *//' \
+                   -e 's/ *$//' \
+                   -e '/^$/d'
+           } | \
+           tr ' ' '\n' | \
+           sort -u | \
+           tr '\n' ' '
+  )
+
+  preqs=$(
+          {
+            for p in $preqs; do
+              f=0
+              for l in $plist; do
+                if [ "x$p" == "x$l" ]; then
+                  f=1
+                  break
+                fi
+              done
+              if [ "x$f" == 'x0' ]; then
+                dpkg -l $p > /dev/null 2>&1 || echo $p
+              fi
+            done
+          } | \
+          tr '\n' ' '
+  )
+
+  echo 'INSTALL REQUIRED DEPENDENCIES:'
+
+  local rc=0
+  for p in $preqs; do
+    echo "  $p"
+    apt-get install -y --force-yes $p >&3 2>&1
+    rc=$?
+    [ "x$rc" != 'x0' ] && break
+  done
+  return $rc
+}
+
 function ofed_install () {
   local ov="$1"
   local fi="$2"
@@ -649,7 +755,7 @@ function ofed_install () {
     is_ofed_v3=yes
 
   if [ "x$os_is_ubuntu" == 'xyes' ]; then
-    apt-get update >&3 2>&1
+    apt-get update -y --force-yes >&3 2>&1
     ci='apt-get install -y --force-yes'
   fi
 
@@ -720,6 +826,12 @@ function ofed_install () {
     done
   fi
 
+  [ "x$os_is_ubuntu" == 'xyes' ] && \
+    ubuntu_install_deb_deps "${mlnx_ofed_install_mntdir}"
+
+  [ "x$os_is_redhat" == 'xyes' ] && \
+    redhat_install_rpm_deps "${mlnx_ofed_install_mntdir}"
+
   echo 'INSTALL OFED PACKAGES:'
 
   local cur_ag=`which apt-get 2> /dev/null`
@@ -727,8 +839,10 @@ function ofed_install () {
         "x$cur_ag" != 'x' ]; then
     {
       echo "#!/bin/bash"
+      echo "force_yes=''"
       echo "[ \"x\$1\" == 'xupdate' ] && exit 0"
-      echo "$cur_ag.save \$@ > /dev/null 2>&1"
+      echo "[ \"x\$1\" == 'xinstall' ] && force_yes='--force-yes'"
+      echo "$cur_ag.save \$@ \$force_yes"
       echo "exit \$?"
     } > ${mellanox_dir_install}/$apt_get_update_disable
 
@@ -1057,7 +1171,6 @@ function service_mgm () {
       ;;
   esac
 }
-
 
 function initctl_mgm () {
   local sn="$1"
