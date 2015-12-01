@@ -19,7 +19,7 @@ for location in MELLANOX_TOOLS_LOCATION:
     MELLANOX_TOOLS = location
     break
 
-def mellanox_config_tools_call(option):
+def config_tools_call(option):
   if MELLANOX_TOOLS == '':
     print >> sys.stderr, 'Error requirements: not found Mellanox configuration tools'
     return 1
@@ -29,134 +29,134 @@ def mellanox_config_tools_call(option):
     print >> sys.stderr, 'Error call: ' + ' '.join(call_command)
   return rc
 
-def mellanox_configure_repository_ofed(version=''):
-  return mellanox_config_tools_call(['configure-repository-ofed', str(version)])
+def configure_repository_ofed(version=''):
+  return config_tools_call(['configure-repository-ofed', str(version)])
 
-def mellanox_configure_repository_openstack(version='kilo'):
-  return mellanox_config_tools_call(['configure-repository-openstack', str(version)])
+def configure_repository_openstack(version='kilo'):
+  return config_tools_call(['configure-repository-openstack', str(version)])
 
-def mellanox_ofed_install(version=''):
-  return mellanox_config_tools_call(['ofed', 'install', str(version)])
+def ofed_install(version=''):
+  return config_tools_call(['ofed', 'install', str(version)])
 
-def mellanox_ofed_bundle_deploy(version=''):
-  return mellanox_config_tools_call(['ofed-bundle-deploy', str(version)])
+def ofed_bundle_deploy(version=''):
+  return config_tools_call(['ofed-bundle-deploy', str(version)])
 
-def mellanox_ofed_remove():
-  return mellanox_config_tools_call(['ofed', 'remove'])
+def ofed_remove():
+  return config_tools_call(['ofed', 'remove'])
 
-def mellanox_e_ipoib_enable():
-  return mellanox_config_tools_call(['e-ipoib', 'enable'])
+def e_ipoib_enable():
+  return config_tools_call(['e-ipoib', 'enable'])
 
-def mellanox_e_ipoib_disable():
-  return mellanox_config_tools_call(['e-ipoib', 'disable'])
+def e_ipoib_disable():
+  return config_tools_call(['e-ipoib', 'disable'])
 
-def mellanox_openibd_enable():
-  return mellanox_config_tools_call(['openibd', 'enable'])
+def openibd_enable():
+  return config_tools_call(['openibd', 'enable'])
 
-def mellanox_openibd_disable():
-  return mellanox_config_tools_call(['openibd', 'disable'])
+def openibd_disable():
+  return config_tools_call(['openibd', 'disable'])
 
-def mellanox_openibd_stop():
-  return mellanox_config_tools_call(['openibd', 'stop'])
+def openibd_stop():
+  return config_tools_call(['openibd', 'stop'])
 
-def mellanox_openibd_start():
-  return mellanox_config_tools_call(['openibd', 'start'])
+def openibd_start():
+  return config_tools_call(['openibd', 'start'])
 
-def mellanox_openibd_restart():
-  return mellanox_config_tools_call(['openibd', 'restart'])
+def openibd_restart():
+  return config_tools_call(['openibd', 'restart'])
 
-def mellanox_mst_enable():
-  return mellanox_config_tools_call(['mst', 'enable'])
+def mst_enable():
+  return config_tools_call(['mst', 'enable'])
 
-def mellanox_mst_disable():
-  return mellanox_config_tools_call(['mst', 'disable'])
+def mst_disable():
+  return config_tools_call(['mst', 'disable'])
 
-def mellanox_mst_stop():
-  return mellanox_config_tools_call(['mst', 'stop'])
+def mst_stop():
+  return config_tools_call(['mst', 'stop'])
 
-def mellanox_mst_start():
-  return mellanox_config_tools_call(['mst', 'start'])
+def mst_start():
+  return config_tools_call(['mst', 'start'])
 
-def mellanox_mst_restart():
-  return mellanox_config_tools_call(['mst', 'restart'])
+def mst_restart():
+  return config_tools_call(['mst', 'restart'])
 
-def mellanox_pk_to_vlan_map(vlan_min=1, vlan_max=16, pk_min=1):
-  return mellanox_config_tools_call(['pk-to-vlan-map', str(vlan_min), str(vlan_max), str(pk_min)])
+def pk_to_vlan_map(vlan_min=1, vlan_max=16, pk_min=1):
+  return config_tools_call(['pk-to-vlan-map', str(vlan_min), str(vlan_max), str(pk_min)])
 
-def mellanox_opensmd_enable():
-  return mellanox_config_tools_call(['opensmd', 'enable'])
+def opensmd_enable():
+  return config_tools_call(['opensmd', 'enable'])
 
-def mellanox_opensmd_disable():
-  return mellanox_config_tools_call(['opensmd', 'disable'])
+def opensmd_disable():
+  return config_tools_call(['opensmd', 'disable'])
 
-def mellanox_opensmd_stop():
-  return mellanox_config_tools_call(['opensmd', 'stop'])
+def opensmd_stop():
+  return config_tools_call(['opensmd', 'stop'])
 
-def mellanox_opensmd_start():
-  return mellanox_config_tools_call(['opensmd', 'start'])
+def opensmd_start():
+  return config_tools_call(['opensmd', 'start'])
 
-def mellanox_opensmd_restart():
-  return mellanox_config_tools_call(['opensmd', 'restart'])
+def opensmd_restart():
+  return config_tools_call(['opensmd', 'restart'])
 
-def mellanox_connectx_port_config(mode_port_0='ib', mode_port_1='ib'):
-  return mellanox_config_tools_call(['connectx-port-config', str(mode_port_0), str(mode_port_1)])
+def connectx_port_config(mode_port_0='ib', mode_port_1='ib'):
+  return config_tools_call(['connectx-port-config', str(mode_port_0), str(mode_port_1)])
 
-def mellanox_sriov_enable():
-  return mellanox_config_tools_call(['sriov', 'enable'])
+def sriov_enable():
+  return config_tools_call(['sriov', 'enable'])
 
-def mellanox_sriov_disable():
-  return mellanox_config_tools_call(['sriov', 'disable'])
+def sriov_disable():
+  return config_tools_call(['sriov', 'disable'])
 
-def mellanox_sriov_fw_enable():
-  return mellanox_config_tools_call(['sriov-fw', 'enable'])
+def sriov_fw_enable():
+  return config_tools_call(['sriov-fw', 'enable'])
 
-def mellanox_sriov_fw_disable():
-  return mellanox_config_tools_call(['sriov-fw', 'disable'])
+def sriov_fw_disable():
+  return config_tools_call(['sriov-fw', 'disable'])
 
-def mellanox_sysctl_conf_set(var, val):
-  return mellanox_config_tools_call(['sysctl-conf', 'set', str(var), str(val)])
+def sysctl_conf_set(var, val):
+  return config_tools_call(['sysctl-conf', 'set', str(var), str(val)])
 
-def mellanox_sysctl_conf_unset(var):
-  return mellanox_config_tools_call(['sysctl-conf', 'unset', str(var)])
+def sysctl_conf_unset(var):
+  return config_tools_call(['sysctl-conf', 'unset', str(var)])
 
-def mellanox_interface_set(if_name, if_alias, ip_address, net_mask='255.255.255.0'):
-  return mellanox_config_tools_call(['interface', 'set', str(if_name), str(if_alias), str(ip_address), str(net_mask)])
+def interface_set(if_name, if_alias, ip_address, net_mask='255.255.255.0'):
+  return config_tools_call(['interface', 'set', str(if_name), str(if_alias), str(ip_address), str(net_mask)])
 
-def mellanox_interface_unset(if_name, if_alias):
-  return mellanox_config_tools_call(['interface', 'unset', str(if_name), str(if_alias)])
+def interface_unset(if_name, if_alias):
+  return config_tools_call(['interface', 'unset', str(if_name), str(if_alias)])
 
-def mellanox_interface_up(if_name, if_alias):
-  return mellanox_config_tools_call(['interface', 'up', str(if_name), str(if_alias)])
+def interface_up(if_name, if_alias):
+  return config_tools_call(['interface', 'up', str(if_name), str(if_alias)])
 
-def mellanox_interface_down(if_name, if_alias):
-  return mellanox_config_tools_call(['interface', 'down', str(if_name), str(if_alias)])
+def interface_down(if_name, if_alias):
+  return config_tools_call(['interface', 'down', str(if_name), str(if_alias)])
 
-def mellanox_set_vf_type_num(mode_port_0='ib', mode_port_1='ib', num_vf=0, probe_vf=0):
-  return mellanox_config_tools_call(['set-vf-type-num', str(mode_port_0), str(mode_port_1), str(num_vf), str(probe_vf)])
+def set_vf_type_num(mode_port_0='ib', mode_port_1='ib', num_vf=0, probe_vf=0):
+  return config_tools_call(['set-vf-type-num', str(mode_port_0), str(mode_port_1), str(num_vf), str(probe_vf)])
 
-def mellanox_burn_vfs_in_fw(num_vf=16):
-  return mellanox_config_tools_call(['burn-vfs-in-fw', str(num_vf)])
+def burn_vfs_in_fw(num_vf=16):
+  return config_tools_call(['burn-vfs-in-fw', str(num_vf)])
 
-def mellanox_udev_namer_enable():
-  return mellanox_config_tools_call(['udev-namer', 'enable'])
+def udev_namer_enable():
+  return config_tools_call(['udev-namer', 'enable'])
 
-def mellanox_udev_namer_disable():
-  return mellanox_config_tools_call(['udev-namer', 'disable'])
+def udev_namer_disable():
+  return config_tools_call(['udev-namer', 'disable'])
 
-def mellanox_udev_namer_config_set(var, val):
-  return mellanox_config_tools_call(['udev-namer-config', 'set', str(var), str(val)])
+def udev_namer_config_set(var, val):
+  return config_tools_call(['udev-namer-config', 'set', str(var), str(val)])
 
-def mellanox_udev_namer_config_unset(var):
-  return mellanox_config_tools_call(['udev-namer-config', 'unset', str(var)])
+def udev_namer_config_unset(var):
+  return config_tools_call(['udev-namer-config', 'unset', str(var)])
 
-class MellanoxConfigToolsService():
+class ConfigToolsService():
 
   def __init__(self, srv):
     self.srv = srv
 
   def _call_ (self, cmd):
     if self.srv == 'opensmd' or self.srv == 'openibd' or self.srv == 'mst':
-      return mellanox_config_tools_call([self.srv, cmd])
+      return config_tools_call([self.srv, cmd])
     else:
       return False
 
@@ -175,111 +175,111 @@ class MellanoxConfigToolsService():
   def restart (self):
     return self._call_('restart')
 
-class MellanoxConfigToolsOpensmdService(MellanoxConfigToolsService):
+class ConfigToolsOpensmdService(ConfigToolsService):
 
   def vlan2pk (self, vlan_min=1, vlan_max=16, pk_min=1):
-    return mellanox_pk_to_vlan_map(vlan_min, vlan_max, pk_min)
+    return pk_to_vlan_map(vlan_min, vlan_max, pk_min)
 
-class MellanoxConfigToolsRepository():
+class ConfigToolsRepository():
 
   def ofed (self, version=''):
-    return mellanox_configure_repository_ofed(version)
+    return configure_repository_ofed(version)
 
   def openstack (self, version='kilo'):
-    return mellanox_configure_repository_openstack(version)
+    return configure_repository_openstack(version)
 
-class MellanoxConfigToolsOfed():
+class ConfigToolsOfed():
 
   def install (self, version=''):
-    return mellanox_ofed_install(version)
+    return ofed_install(version)
 
   def bundle_deploy (self, version=''):
-    return mellanox_ofed_bundle_deploy(version)
+    return ofed_bundle_deploy(version)
 
   def remove (self):
-    return mellanox_ofed_remove()
+    return ofed_remove()
 
-class MellanoxConfigToolsEIPOIB():
+class ConfigToolsEIPOIB():
 
   def enable (self):
-    return mellanox_e_ipoib_enable()
+    return e_ipoib_enable()
 
   def disable (self):
-    return mellanox_e_ipoib_disable()
+    return e_ipoib_disable()
 
-class MellanoxConfigToolsSysctl():
+class ConfigToolsSysctl():
 
   def set (self, var, val):
-    return mellanox_sysctl_conf_set(var, val)
+    return sysctl_conf_set(var, val)
 
   def unset (self, var):
-    return mellanox_sysctl_conf_unset(var)
+    return sysctl_conf_unset(var)
 
-class MellanoxConfigToolsInterface():
+class ConfigToolsInterface():
 
   def set (self, if_name, if_alias, ip_address, net_mask='255.255.255.0'):
-    return mellanox_interface_set(if_name, if_alias, ip_address, net_mask)
+    return interface_set(if_name, if_alias, ip_address, net_mask)
 
   def unset (self, if_name, if_alias):
-    return mellanox_interface_unset(if_name, if_alias)
+    return interface_unset(if_name, if_alias)
 
   def up (self, if_name, if_alias):
-    return mellanox_interface_up(if_name, if_alias)
+    return interface_up(if_name, if_alias)
 
   def down (self, if_name, if_alias):
-    return mellanox_interface_down(if_name, if_alias)
+    return interface_down(if_name, if_alias)
 
-class MellanoxConfigToolsSRIOVKernel():
-
-  def enable (self):
-    return mellanox_sriov_enable()
-
-  def disable (self):
-    return mellanox_sriov_disable()
-
-class MellanoxConfigToolsSRIOVFirmware():
+class ConfigToolsSRIOVKernel():
 
   def enable (self):
-    return mellanox_sriov_fw_enable()
+    return sriov_enable()
 
   def disable (self):
-    return mellanox_sriov_fw_disable()
+    return sriov_disable()
+
+class ConfigToolsSRIOVFirmware():
+
+  def enable (self):
+    return sriov_fw_enable()
+
+  def disable (self):
+    return sriov_fw_disable()
 
   def burn (self, num_vf=16):
-    return mellanox_burn_vfs_in_fw(num_vf)
+    return burn_vfs_in_fw(num_vf)
 
-class MellanoxConfigToolsSRIOVModprobe():
+class ConfigToolsSRIOVModprobe():
 
   def set (self, mode_port_0='ib', mode_port_1='ib', num_vf=0, probe_vf=0):
-    return mellanox_set_vf_type_num(mode_port_0, mode_port_1, num_vf, probe_vf)
+    return set_vf_type_num(mode_port_0, mode_port_1, num_vf, probe_vf)
 
-class MellanoxConfigToolsSRIOV():
+class ConfigToolsSRIOV():
 
   def __init__(self):
-    self.kernel     = MellanoxConfigToolsSRIOVKernel()
-    self.firmware   = MellanoxConfigToolsSRIOVFirmware()
-    self.modprobe   = MellanoxConfigToolsSRIOVModprobe()
+    self.kernel     = ConfigToolsSRIOVKernel()
+    self.firmware   = ConfigToolsSRIOVFirmware()
+    self.modprobe   = ConfigToolsSRIOVModprobe()
 
-class MellanoxConfigToolsConnectx():
+class ConfigToolsConnectx():
 
   def set (self, mode_port_0='ib', mode_port_1='ib'):
-    return mellanox_connectx_port_config(mode_port_0, mode_port_1)
+    return connectx_port_config(mode_port_0, mode_port_1)
 
-class MellanoxConfigToolsUDEVNamer():
+class ConfigToolsUDEVNamer():
 
   def enable (self):
-    return mellanox_udev_namer_enable()
+    return udev_namer_enable()
 
   def disable (self):
-    return mellanox_udev_namer_disable()
+    return udev_namer_disable()
 
   def set (self, var, val):
-    return mellanox_udev_namer_config_set(var, val)
+    return udev_namer_config_set(var, val)
 
   def unset (self, var):
-    return mellanox_udev_namer_config_unset(var)
+    return udev_namer_config_unset(var)
 
-class MellanoxConfigTools(object):
+class ConfigTools(object):
 
   def __init__(self):
 
@@ -292,17 +292,17 @@ class MellanoxConfigTools(object):
     if dm == 'yes':
       self._debug   = True
 
-    self.opensmd    = MellanoxConfigToolsOpensmdService('opensmd')
-    self.openibd    = MellanoxConfigToolsService('openibd')
-    self.mst        = MellanoxConfigToolsService('mst')
-    self.repository = MellanoxConfigToolsRepository()
-    self.ofed       = MellanoxConfigToolsOfed()
-    self.eipoib     = MellanoxConfigToolsEIPOIB()
-    self.sysctl     = MellanoxConfigToolsSysctl()
-    self.interface  = MellanoxConfigToolsInterface()
-    self.sriov      = MellanoxConfigToolsSRIOV()
-    self.connectx   = MellanoxConfigToolsConnectx()
-    self.udevnamer  = MellanoxConfigToolsUDEVNamer()
+    self.opensmd    = ConfigToolsOpensmdService('opensmd')
+    self.openibd    = ConfigToolsService('openibd')
+    self.mst        = ConfigToolsService('mst')
+    self.repository = ConfigToolsRepository()
+    self.ofed       = ConfigToolsOfed()
+    self.eipoib     = ConfigToolsEIPOIB()
+    self.sysctl     = ConfigToolsSysctl()
+    self.interface  = ConfigToolsInterface()
+    self.sriov      = ConfigToolsSRIOV()
+    self.connectx   = ConfigToolsConnectx()
+    self.udevnamer  = ConfigToolsUDEVNamer()
 
   @property
   def debug(self):
