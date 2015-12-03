@@ -3,6 +3,3 @@ opt/mellanox/src/mlnx-udev-namer/80-mlnx-udev-namer.rules opt/mellanox/src/mlnx-
 opt/mellanox/src/mlnx-udev-namer/Makefile opt/mellanox/src/mlnx-udev-namer
 opt/mellanox/src/mlnx-udev-namer/mlnx-udev-namer.conf opt/mellanox/src/mlnx-udev-namer
 opt/mellanox/src/mlnx-udev-namer/mlnx-udev-namer.cpp opt/mellanox/src/mlnx-udev-namer
-opt/mellanox/src/mellanoxconfig-setup.py opt/mellanox/src
-opt/mellanox/src/mellanoxconfig/__init__.py opt/mellanox/src/mellanoxconfig
-opt/mellanox/src/mellanoxconfig/tools.py opt/mellanox/src/mellanoxconfig

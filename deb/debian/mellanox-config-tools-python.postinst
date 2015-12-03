@@ -1,0 +1,14 @@
+#!/bin/bash
+                       mlnx_src=/opt/mellanox/src/python
+         mlnx_sd_mellanoxconfig=mellanoxconfig
+   mlnx_sf_mellanoxconfig_setup=mellanoxconfig-setup.py
+{
+  if [ -d ${mlnx_src} -a \
+        -d ${mlnx_src}/${mlnx_sd_mellanoxconfig} -a \
+        -f ${mlnx_src}/${mlnx_sf_mellanoxconfig_setup} ]; then
+      cd ${mlnx_src}
+      python ${mlnx_sf_mellanoxconfig_setup} install
+      python ${mlnx_sf_mellanoxconfig_setup} clean --all
+      cd -
+  fi
+} > /dev/null 2>&1

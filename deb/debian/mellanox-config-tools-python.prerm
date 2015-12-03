@@ -1,0 +1,5 @@
+#!/bin/bash
+             mlnx_python_module=MellanoxConfig
+{
+  pip uninstall -y ${mlnx_python_module}
+} > /dev/null 2>&1

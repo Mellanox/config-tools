@@ -81,6 +81,7 @@ mellanox_dir_var=$mellanox_dir_home/var
 mellanox_dir_src=$mellanox_dir_home/src
 mellanox_dir_install=$mellanox_dir_home/install
 apt_get_update_disable=apt-get-update-disable
+apt_get_install_options='--force-yes --option=Dpkg::Options::=--force-confold'
 mellanox_config_util=/usr/bin/$mlnx_config
 mellanox_ofed_version_deploy=ofed-deploy
 
@@ -199,7 +200,7 @@ if [ "x$os_is_ubuntu" == 'xyes' ]; then
   package_ofed_pre_install+=(
         autotools-dev conf debhelper dpatch libcr-dev libltdl-dev
         python-libxml2 libboost-dev libboost-regex-dev tcl8.4 tcl8.4
-        tk8.4 tk8.4-dev
+        tk8.4 tk8.4-dev bison gfortran flex libnl1
   )
 fi
 
@@ -210,7 +211,7 @@ if [ "x$os_is_redhat" == 'xyes' ]; then
 fi
 
 package_ofed_post_install=(
-        mc openibd-eth-ipoib-fix
+        mc openibd-eth-ipoib-fix sqlite3
 )
 
 mlnx_opensm_exec=/usr/sbin/opensm
@@ -725,7 +726,7 @@ function ubuntu_install_deb_deps () {
   local rc=0
   for p in $preqs; do
     echo "  $p"
-    apt-get install -y --force-yes $p >&3 2>&1
+    apt-get install -y ${apt_get_install_options} $p >&3 2>&1
     rc=$?
     [ "x$rc" != 'x0' ] && break
   done
@@ -756,7 +757,7 @@ function ofed_install () {
 
   if [ "x$os_is_ubuntu" == 'xyes' ]; then
     apt-get update -y --force-yes >&3 2>&1
-    ci='apt-get install -y --force-yes'
+    ci="apt-get install -y ${apt_get_install_options}"
   fi
 
   if [ "x$os_is_redhat" == 'xyes' ]; then
@@ -839,10 +840,10 @@ function ofed_install () {
         "x$cur_ag" != 'x' ]; then
     {
       echo "#!/bin/bash"
-      echo "force_yes=''"
+      echo "force_options=''"
       echo "[ \"x\$1\" == 'xupdate' ] && exit 0"
-      echo "[ \"x\$1\" == 'xinstall' ] && force_yes='--force-yes'"
-      echo "$cur_ag.save \$@ \$force_yes"
+      echo "[ \"x\$1\" == 'xinstall' ] && force_options='${apt_get_install_options}'"
+      echo "$cur_ag.save \$@ \$force_options"
       echo "exit \$?"
     } > ${mellanox_dir_install}/$apt_get_update_disable
 

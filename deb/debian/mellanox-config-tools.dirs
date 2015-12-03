@@ -1,4 +1,3 @@
 opt/mellanox/bin
 opt/mellanox/src
-opt/mellanox/src/mellanoxconfig
 opt/mellanox/src/mlnx-udev-namer

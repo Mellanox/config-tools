@@ -7,4 +7,9 @@ Standards-Version: 3.9.3
 Package: mellanox-config-tools
 Architecture: all
 Description: Mellanox Config Tools
-Depends: cpp, libboost-dev, libboost-regex-dev, python, python-pip
+Depends: cpp, libboost-dev, libboost-regex-dev
+
+Package: mellanox-config-tools-python
+Architecture: all
+Description: Mellanox Config Tools, Python API
+Depends: mellanox-config-tools, python, python-pip
