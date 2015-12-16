@@ -43,7 +43,7 @@ Fedora release < 20, Redhat v 7 for other Fedora releases.
 ### Usage
 
 ```
-# sudo mellanox-config-tools \<function\> \[\<parameters list\>\]
+# sudo mellanox-config-tools <function> [<parameters list>]
 ```
 
 ### Function list
