@@ -36,7 +36,7 @@ Ubuntu:
 |Ubuntu|14.04|2.4-2.0.3, 3.1-1.0.3|
 |Ubuntu|15.04|3.1-1.0.3|
 
->Notes: OS vendor 'Redhat' means <Redhat|Centos|Fedora>. Supported
+>Notes: OS vendor 'Redhat' means \<Redhat|Centos|Fedora\>. Supported
 Fedora release > 11, is recognized by script as Redhat v 6 for
 Fedora release < 20, Redhat v 7 for other Fedora releases.
 
