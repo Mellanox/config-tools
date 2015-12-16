@@ -24,7 +24,7 @@ Ubuntu:
 ```
  import mellanoxconfig
  mlnx = mellanoxconfig.ConfigTools()
- mlnx.<object>.<functon>([<paramlist>])
+ mlnx.<object>.<function>([<paramlist>])
 ```
 
 ### Objects/Functions list
@@ -97,3 +97,7 @@ Ubuntu:
 + **disable()**
 + **set(var, val)**
 + **unset(var)**
+
+### Return values
+All functions returns Bash shell script exit code, rc=0 is successfully runned function.
+

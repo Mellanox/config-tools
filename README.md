@@ -40,9 +40,13 @@ Ubuntu:
 Fedora release > 11, is recognized by script as Redhat v 6 for
 Fedora release < 20, Redhat v 7 for other Fedora releases.
 
+### Environment variables
+Supported environment variable MLNX_DEBUG for providing debug information during script execution.
+
 ### Usage
 
 ```
+# export MLNX_DEBUG=<yes|no>
 # sudo mellanox-config-tools <function> [<parameters list>]
 ```
 
@@ -120,6 +124,5 @@ Fedora release < 20, Redhat v 7 for other Fedora releases.
 
    ***udev-namer-config*** \<set|unset\> \<variable\> \[\<value\>\]
 
-
-
-
+### Exit code
+All functions return rc=0 in case successfully runned function.
