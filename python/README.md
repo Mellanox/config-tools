@@ -9,10 +9,13 @@
 ### Installation
 Redhat/Centos/Fedora:
 ```
+# sudo wget http://bgate.mellanox.com/openstack/repository/repo/mellanox-redhat-repository.repo -O /etc/yum.repos.d/mellanox-redhat-repository.repo
 # sudo yum install -y mellanox-config-tools-python
 ```
 Ubuntu:
 ```
+# sudo wget http://bgate.mellanox.com/openstack/repository/repo/mellanox-ubuntu-repository.list -O /etc/yum.repos.d/mellanox-ubuntu-repository.list
+# sudo apt-get update -y
 # sudo apt-get update install -y mellanox-config-tools-python
 ```
 
@@ -24,6 +27,10 @@ Ubuntu:
 ```
 
 ### Objects/Functions list
+
+**debug**
++ **enable()**
++ **dsable()**
 
 **repository**
 + **ofed(version='')**
@@ -58,6 +65,34 @@ Ubuntu:
 + **start()**
 + **restart()**
 + **restart()**
-+ **vlan2pk (vlan_min=1, vlan_max=16, pk_min=1)**
++ **vlan2pk(vlan_min=1, vlan_max=16, pk_min=1)**
 
+**sysctl**
++ **set(var, val)**
++ **unset(var)**
 
+**interface**
++ **set(if_name, if_alias, ip_address, net_mask='255.255.255.0')**
++ **unset(if_name, if_alias)**
++ **up(if_name, if_alias)**
++ **down(if_name, if_alias)**
+
+**sriov**
++ **kernel**
++ + **enable()**
++ + **disable()**
++ **firmware**
++ + **enable()**
++ + **disable()**
++ **modprobe**
++ + **enable()**
++ + **disable()**
+
+**connectx**
++ **set(mode_port_0='ib', mode_port_1='ib')**
+
+**udevnamer**
++ **enable()**
++ **disable()**
++ **set(var, val)**
++ **unset(var)**

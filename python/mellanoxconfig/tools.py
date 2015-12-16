@@ -292,12 +292,12 @@ class ConfigTools(object):
     if dm == 'yes':
       self._debug   = True
 
-    self.opensmd    = ConfigToolsOpensmdService('opensmd')
-    self.openibd    = ConfigToolsService('openibd')
-    self.mst        = ConfigToolsService('mst')
     self.repository = ConfigToolsRepository()
     self.ofed       = ConfigToolsOfed()
     self.eipoib     = ConfigToolsEIPOIB()
+    self.openibd    = ConfigToolsService('openibd')
+    self.mst        = ConfigToolsService('mst')
+    self.opensmd    = ConfigToolsOpensmdService('opensmd')
     self.sysctl     = ConfigToolsSysctl()
     self.interface  = ConfigToolsInterface()
     self.sriov      = ConfigToolsSRIOV()
