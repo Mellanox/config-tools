@@ -30,7 +30,7 @@ Ubuntu:
 
 **debug**
 + **enable()**
-+ **dsable()**
++ **disable()**
 
 **repository**
 + **ofed(version='')**
@@ -64,7 +64,6 @@ Ubuntu:
 + **stop()**
 + **start()**
 + **restart()**
-+ **restart()**
 + **vlan2pk(vlan_min=1, vlan_max=16, pk_min=1)**
 
 **sysctl**
@@ -79,14 +78,14 @@ Ubuntu:
 
 **sriov**
 + **kernel**
-+ + **enable()**
-+ + **disable()**
+++ **enable()**
+++ **disable()**
 + **firmware**
-+ + **enable()**
-+ + **disable()**
+++ **enable()**
+++ **disable()**
 + **modprobe**
-+ + **enable()**
-+ + **disable()**
+++ **enable()**
+++ **disable()**
 
 **connectx**
 + **set(mode_port_0='ib', mode_port_1='ib')**
