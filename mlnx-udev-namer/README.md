@@ -55,37 +55,52 @@ in BOOST versions < 1.45 not supported comments started with '#'
 
    *Allow:* true|false|yes|no.
 
-+ *Default:* false.
+   *Default:* false.
 
-+ prefix_eipoib_mac_address
-MAC address prefix for E_IPOIB virtual functions interfaces,
-case insensitive value.
-Allow: from half to 4 byte heximal ":" separated number.
-Default: 'fe'.
++ **prefix_eipoib_mac_address**
 
-+ prefix_infiniband
-Infiniband intrefaces prefix, case insensitive value,
-reducing to lowercase.
-Allow: up to 4 charters, started from alpha value.
-Default: 'ib'.
+   MAC address prefix for E_IPOIB virtual functions interfaces, case insensitive value.
 
-+ prefix_ethernet
-Ethernet intrefaces prefix, case insensitive value,
-reducing to lowercase
-Allow: Up to 4 <alpha|num|-|_> charcters, started from alpha value.
-Default: 'me'.
+   *Allow:* from half to 4 byte heximal ":" separated number.
 
-+ prefix_eipoib
-E_IPOIB intrefaces prefix, case insensitive value, reducing to lowercase.
-Allow: Up to 4 <alpha|num|-|_> charcters, started from alpha value.
-Default: 'mi'.
+   *Default:* 'fe'.
 
-+ prefix_port
-Port number prefix, case insensitive value, reducing to lowercase.
-Allow: 1 or 2 alpha charcters.
-Default: 'p'.
++ **prefix_infiniband**
 
-+ prefix_virtfn
-Virtual function prefix, case insensitive value, reducing to lowercase.
-Allow: 1 or 2 alpha charcters.
-Default: 'f'.
+   Infiniband intrefaces prefix, case insensitive value, reducing to lowercase.
+
+   *Allow:* up to 4 charters, started from alpha value.
+
+   *Default:* 'ib'.
+
++ **prefix_ethernet**
+
+   Ethernet intrefaces prefix, case insensitive value, reducing to lowercase
+
+   *Allow:* up to 4 <alpha|num|-|_> charcters, started from alpha value.
+
+   *Default:* 'me'.
+
++ **prefix_eipoib**
+
+   E_IPOIB intrefaces prefix, case insensitive value, reducing to lowercase.
+
+   *Allow:* up to 4 <alpha|num|-|_> charcters, started from alpha value.
+
+   *Default:* 'mi'.
+
++ **prefix_port**
+
+   Port number prefix, case insensitive value, reducing to lowercase.
+
+   *Allow:* 1 or 2 alpha charcters.
+
+   *Default:* 'p'.
+
++ **prefix_virtfn**
+
+   Virtual function prefix, case insensitive value, reducing to lowercase.
+
+   *Allow:* 1 or 2 alpha charcters.
+
+   *Default:* 'f'.
