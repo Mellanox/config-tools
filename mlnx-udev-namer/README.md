@@ -43,17 +43,17 @@ in BOOST versions < 1.45 not supported comments started with '#'
 
 + **enable**
 
-+ Enable/disable use Mellanox UDEV namer.
+   Enable/disable use Mellanox UDEV namer.
 
-+ *Allow:* true|false|yes|no.
+   *Allow:* true|false|yes|no.
 
-+ *Default:* false.
+   *Default:* false.
 
 + **generate_eipoib_mac_address**
 
-+ Generate MAC addreses for E_IPOIB virtual functions interfaces, case insensitive value.
+   Generate MAC addreses for E_IPOIB virtual functions interfaces, case insensitive value.
 
-+ *Allow:* true|false|yes|no.
+   *Allow:* true|false|yes|no.
 
 + *Default:* false.
 
