@@ -43,82 +43,82 @@ Fedora release < 20, Redhat v 7 for other Fedora releases.
 ### Usage
 
 ```
-# sudo mellanox-config-tools <function> [<parameters list>]
+# sudo mellanox-config-tools \<function\> \[\<parameters list\>\]
 ```
 
 ### Function list
 
 + Configure OFED repository
 
-  ***configure-repository-ofed*** <ofed-version-number>
+  ***configure-repository-ofed*** \<ofed-version-number\>
   
 + Configure Openstack repository
 
-   ***configure-repository-openstack*** <openstack-release-codename>
+   ***configure-repository-openstack*** \<openstack-release-codename\>
 
 + Mellanox OFED install/remove
 
-   ***ofed*** <install|remove> [<ofed-version-number>] [force]
+   ***ofed*** \<install|remove\> \[\<ofed-version-number\>\] \[force\]
 
 + Ethernet IP over IB enable/disable
 
-  ***e-ipoib*** <enable|disable>
+  ***e-ipoib*** \<enable|disable\>
 
 + Ethernet IP over IB kernel module load delay
 
-  ***e-ipoib-pre-start-delay*** <delay in seconds>
+  ***e-ipoib-pre-start-delay*** \<delay in seconds\>
   
 + Configuration OPENIBD daemon
 
-  ***openibd*** <enable|disable|restart|stop|start>
+  ***openibd*** \<enable|disable|restart|stop|start\>
   
 + Configuration OPENSMD daemon
 
-  ***opensmd*** <enable|disable|restart|stop|start>
+  ***opensmd*** \<enable|disable|restart|stop|start\>
 
 + OPENSM partitions configuration
 
-  ***pk-to-vlan-map*** <vlan-min> <vlan-max> [<pk-min=1>]
+  ***pk-to-vlan-map*** \<vlan-min\> \<vlan-max\> \[\<pk-min=1\>\]
 
 + Configuration MST daemon
 
-  ***mst*** <enable|disable|restart|stop|start>
+  ***mst*** \<enable|disable|restart|stop|start\>
 
 + Change and apply /etc/sysctl.conf parameters
 
-  ***sysctl-conf*** <set|unset> <var> <val>
+  ***sysctl-conf*** \<set|unset\> \<var\> \<val\>
 
 + Configure and manage network interfaces aliases
 
-  ***interface*** <set|unset|up|down> <if-name> <if-alias> [<ip-address>  [<netmask>]]
+  ***interface*** \<set|unset|up|down\> \<if-name\> \<if-alias\> \[\<ip-address\>  \[\<netmask\>\]\]
 
 + Configure Mellanox adapters ports by using *'connectx-port-config'*
 
-  ***connectx-port-config*** <port_0_mode> <port_1_mode>
+  ***connectx-port-config*** \<port_0_mode\> \<port_1_mode\>
 
 + Enable/disable SRIOV support by kernel (intel_iommu=on/off)
 
-  ***sriov*** <enable|disable>
+  ***sriov*** \<enable|disable\>
 
 + Enable/disable SRIOV support by Mellanox adapter
 
-  ***sriov-fw*** <enable|disable>
+  ***sriov-fw*** \<enable|disable\>
 
 + Configure Mellanox adapter ports types and number of VF
 
-  ***set-vf-type-num*** <port_0_mode> <port_1_mode> [<num-vf> [<probe-vf>]]
+  ***set-vf-type-num*** \<port_0_mode\> \<port_1_mode\> \[\<num-vf\> \[\<probe-vf\>\]\]
 
 + Configure maximum supported by Mellanox adapter number of VF
 
-  ***burn-vfs-in-fw*** <num-vf>
+  ***burn-vfs-in-fw*** \<num-vf\>
 
 + Enable/disable Mellanox UDEV namer
 
-  ***udev-namer*** <enable|disable>
+  ***udev-namer*** \<enable|disable\>
 
 + Configure Mellanox UDEV namer, for supported variables please refer to the entries in the configuration file *'/etc/udev/mlnx-udev-namer.conf'*
 
-   ***udev-namer-config*** <set|unset> <variable> [<value>]
+   ***udev-namer-config*** \<set|unset\> \<variable\> \[\<value\>\]
 
 
 
