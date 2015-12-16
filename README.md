@@ -22,7 +22,7 @@ Ubuntu:
 ```
 ### Supported versions and releases
 
-|OS\/Software|Version|
+|OS/Software|Version|
 |---:|:---|
 |Redhat|6.X, 7.X|
 |Ubuntu|14.04, 15.04|
