@@ -30,73 +30,73 @@ Ubuntu:
 ### Objects/Functions list
 
 **debug**
-+ **enable()**
-+ **disable()**
++ *enable()*
++ *disable()*
 
 **repository**
-+ **ofed(version='')**
-+ **openstack(version='')**
++ *ofed(version='')*
++ *openstack(version='')*
 
 **ofed**
-+ **install(version='')**
-+ **remove()**
++ *install(version='')*
++ *remove()*
 
 **eipoib**
-+ **enable()**
-+ **disable()**
++ *enable()*
++ *disable()*
 
 **openibd**
-+ **enable()**
-+ **disable()**
-+ **stop()**
-+ **start()**
-+ **restart()**
++ *enable()*
++ *disable()*
++ *stop()*
++ *start()*
++ *restart()*
 
 **mst**
-+ **enable()**
-+ **disable()**
-+ **stop()**
-+ **start()**
-+ **restart()**
++ *enable()*
++ *disable()*
++ *stop()*
++ *start()*
++ *restart()*
 
 **opensmd**
-+ **enable()**
-+ **disable()**
-+ **stop()**
-+ **start()**
-+ **restart()**
-+ **vlan2pk(vlan_min=1, vlan_max=16, pk_min=1)**
++ *enable()*
++ *disable()*
++ *stop()*
++ *start()*
++ *restart()*
++ *vlan2pk(vlan_min=1, vlan_max=16, pk_min=1)*
 
 **sysctl**
-+ **set(var, val)**
-+ **unset(var)**
++ *set(var, val)*
++ *unset(var)*
 
 **interface**
-+ **set(if_name, if_alias, ip_address, net_mask='255.255.255.0')**
-+ **unset(if_name, if_alias)**
-+ **up(if_name, if_alias)**
-+ **down(if_name, if_alias)**
++ *set(if_name, if_alias, ip_address, net_mask='255.255.255.0')*
++ *unset(if_name, if_alias)*
++ *up(if_name, if_alias)*
++ *down(if_name, if_alias)*
 
 **sriov.kernel**
-+ **enable()**
-+ **disable()**
++ *enable()*
++ *disable()*
 
 **sriov.firmware**
-+ **enable()**
-+ **disable()**
++ *enable()*
++ *disable()*
 
 **sriov.modprobe**
-+ **enable()**
-+ **disable()**
++ *enable()*
++ *disable()*
 
 **connectx**
-+ **set(mode_port_0='ib', mode_port_1='ib')**
++ *set(mode_port_0='ib', mode_port_1='ib')*
 
 **udevnamer**
-+ **enable()**
-+ **disable()**
-+ **set(var, val)**
-+ **unset(var)**
++ *enable()*
++ *disable()*
++ *set(var, val)*
++ *unset(var)*
 
 ### Return values
 All functions returns Bash shell script exit code, rc=0 is successfully runned function.

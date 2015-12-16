@@ -39,6 +39,7 @@ Mellanox UDEV namer can be configured by changing file /etc/udev/mlnx-udev-namer
 >Notes: Due BOOST bug https://svn.boost.org/trac/boost/ticket/5379
 in BOOST versions < 1.45 not supported comments started with '#'
 
+
 >Notes: Case sensitive parameters names, case insensitive parameters values.
 
 + **enable**
