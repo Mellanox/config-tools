@@ -76,16 +76,17 @@ Ubuntu:
 + **up(if_name, if_alias)**
 + **down(if_name, if_alias)**
 
-**sriov**
-+ **kernel**
-++ **enable()**
-++ **disable()**
-+ **firmware**
-++ **enable()**
-++ **disable()**
-+ **modprobe**
-++ **enable()**
-++ **disable()**
+**sriov.kernel**
++ **enable()**
++ **disable()**
+
+**sriov.firmware**
++ **enable()**
++ **disable()**
+
+**sriov.modprobe**
++ **enable()**
++ **disable()**
 
 **connectx**
 + **set(mode_port_0='ib', mode_port_1='ib')**
