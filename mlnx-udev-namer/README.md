@@ -41,16 +41,19 @@ in BOOST versions < 1.45 not supported comments started with '#'
 
 >Notes: Case sensitive parameters names, case insensitive parameters values.
 
-+ enable
-Enable/disable use Mellanox UDEV namer.
-**Allow:** true|false|yes|no.
-**Default:** false.
++ **enable**
 
-+ generate_eipoib_mac_address
-Generate MAC addreses for E_IPOIB virtual functions interfaces,
-case insensitive value.
-Allow: true|false|yes|no.
-Default: false.
+Enable/disable use Mellanox UDEV namer.
+
+**Allow:** *true|false|yes|no*.
+**Default:** *false*.
+
++ **generate_eipoib_mac_address**
+
+Generate MAC addreses for E_IPOIB virtual functions interfaces, case insensitive value.
+
+**Allow:** *true|false|yes|no*.
+**Default:** *false*.
 
 + prefix_eipoib_mac_address
 MAC address prefix for E_IPOIB virtual functions interfaces,
