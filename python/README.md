@@ -24,6 +24,7 @@ Ubuntu:
 ```
  import mellanoxconfig
  mlnx = mellanoxconfig.ConfigTools()
+ mlnx.<object>.<functon>([<paramlist>])
 ```
 
 ### Objects/Functions list
