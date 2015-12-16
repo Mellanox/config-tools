@@ -1,4 +1,4 @@
-nox Configuration Tools, Python API
+# Mellanox Configuration Tools, Python API
 
 ### Releases
 |Type|Version|
