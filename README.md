@@ -6,7 +6,7 @@ Bash shell script for deployment and configuration Mellanox OFED, Mellanox Ether
 |Type|Version|
 |---:|:---|
 |Development|0.0.1|
-|Stable|N/A|
+|Last stable|N/A|
 
 ### Installation
 Redhat/Centos/Fedora:

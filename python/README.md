@@ -4,7 +4,7 @@
 |Type|Version|
 |---:|:---|
 |Development|0.0.1|
-|Stable|N/A|
+|Last Stable|N/A|
 
 ### Installation
 Redhat/Centos/Fedora:
@@ -84,10 +84,10 @@ Ubuntu:
 **sriov.firmware**
 + *enable()*
 + *disable()*
++ *burn(num_vf=16)*
 
 **sriov.modprobe**
-+ *enable()*
-+ *disable()*
++ *set(mode_port_0='ib', mode_port_1='ib', num_vf=0, probe_vf=0)*
 
 **connectx**
 + *set(mode_port_0='ib', mode_port_1='ib')*

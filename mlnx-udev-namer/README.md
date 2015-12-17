@@ -6,7 +6,7 @@ UDEV namer can provide custom persistent names for Mellanox adapters interfaces.
 |Type|Version|
 |---:|:---|
 |Development|0.0.1|
-|Stable|N/A|
+|Last stable|N/A|
 
 ### Installation
 Redhat/Centos/Fedora:
