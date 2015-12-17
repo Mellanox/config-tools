@@ -1,6 +1,7 @@
 # Mellanox UDEV namer
 
-UDEV namer can provide custom persistent names for Mellanox adapters interfaces.
+Mellanox UDEV namer is part of Mellanox Config Toolsnamer,
+can provide custom persistent names for Mellanox adapters interfaces.
 
 ### Releases
 |Type|Version|
@@ -12,13 +13,13 @@ UDEV namer can provide custom persistent names for Mellanox adapters interfaces.
 Redhat/Centos/Fedora:
 ```
 # sudo wget http://bgate.mellanox.com/openstack/repository/repo/mellanox-redhat-repository.repo -O /etc/yum.repos.d/mellanox-redhat-repository.repo
-# sudo yum install -y mellanox-udev-namer
+# sudo yum install -y mellanox-config-tools
 ```
 Ubuntu:
 ```
 # sudo wget http://bgate.mellanox.com/openstack/repository/repo/mellanox-ubuntu-repository.list -O /etc/yum.repos.d/mellanox-ubuntu-repository.list
 # sudo apt-get update -y
-# sudo apt-get update install -y mellanox-udev-namer
+# sudo apt-get update install -y mellanox-config-tools
 ```
 ### Supported versions and releases
 
