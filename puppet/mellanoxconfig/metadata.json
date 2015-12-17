@@ -1,0 +1,17 @@
+{
+  "name": "mellanox-mellanoxconfig",
+  "version": "0.0.1",
+  "author": "Mellanox <openstack@mellanox.com>",
+  "summary": "Mellanox Config Tools",
+  "license": "Apache 2.0",
+  "source": "http://github.com/mellanox/config-tools/puppet",
+  "project_page": "http://github.com/mellanox/config-tools/puppet",
+  "issues_url": "https://github.com/mellanox/config-tools/puppet/issues",
+  "dependencies": [
+    {
+      "name": "puppetlabs-stdlib",
+      "version_range": ">= 1.0.0"
+    }
+  ]
+}
+
