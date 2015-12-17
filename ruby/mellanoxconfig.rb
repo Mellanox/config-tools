@@ -3,7 +3,7 @@ class Mellanoxconfig
 
   VERSION                 = "0.0.1"
   CONFIG_TOOLS_ENV_DEBUG  = 'MLNX_DEBUG'
-  CONFIG_TOOLS_FILENAME   = 'mellanox-config-tools',
+  CONFIG_TOOLS_FILENAME   = 'mellanox-config-tools'
   CONFIG_TOOLS_LOCATION   = ['/usr/bin', '/opt/mellanox/bin']
 
 end
