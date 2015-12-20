@@ -13,3 +13,13 @@ Package: mellanox-config-tools-python
 Architecture: all
 Description: Mellanox Config Tools, Python API
 Depends: mellanox-config-tools, python, python-pip
+
+Package: mellanox-config-tools-ruby
+Architecture: all
+Description: Mellanox Config Tools, Ruby API
+Depends: mellanox-config-tools, ruby
+
+Package: mellanox-config-tools-puppet
+Architecture: all
+Description: Mellanox Config Tools, Puppet API
+Depends: mellanox-config-tools-ruby, puppet

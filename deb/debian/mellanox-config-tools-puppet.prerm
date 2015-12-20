@@ -1,0 +1,8 @@
+#!/bin/bash
+                       mlnx_src=/opt/mellanox/src/puppet
+ mlnx_sf_mellanoxconfig_uninstall=uninstall.sh
+{
+  if [ -f ${mlnx_src}/${mlnx_sf_mellanoxconfig_uninstall} ]; then
+      /bin/bash ${mlnx_src}/${mlnx_sf_mellanoxconfig_uninstall}
+  fi
+} 2>&1 > /dev/null

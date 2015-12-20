@@ -1,6 +1,6 @@
 # Mellanox UDEV namer
 
-Mellanox UDEV namer is part of Mellanox Config Toolsnamer,
+Mellanox UDEV namer is part of Mellanox Config Tools,
 can provide custom persistent names for Mellanox adapters interfaces.
 
 ### Releases

@@ -1,0 +1,4 @@
+opt/mellanox/src/ruby/README.md opt/mellanox/src/ruby
+opt/mellanox/src/ruby/install.rb opt/mellanox/src/ruby
+opt/mellanox/src/ruby/uninstall.rb opt/mellanox/src/ruby
+opt/mellanox/src/ruby/mellanoxconfig.rb opt/mellanox/src/ruby

@@ -14,4 +14,4 @@
   [ -f ${os_usr_bin}/${mlnx_sf_mellanox_config_tools} -o \
     -L ${os_usr_bin}/${mlnx_sf_mellanox_config_tools} ] && \
       rm -f ${os_usr_bin}/${mlnx_sf_mellanox_config_tools}
-} > /dev/null 2>&1
+} 2>&1 > /dev/null

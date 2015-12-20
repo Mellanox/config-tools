@@ -52,6 +52,8 @@ redhat_current_os_release=`cat /etc/redhat-release 2> /dev/null | \
 if [ "x$redhat_current_os_release" == 'x' ]; then
   redhat_current_os_release=$os_is_undefined
 else
+  os_is_ubuntu='no'
+  ubuntu_current_os_release=$os_is_undefined
   os_is_redhat='yes'
   redhat_os_type=''
   os_release=''

@@ -11,4 +11,4 @@
       python ${mlnx_sf_mellanoxconfig_setup} clean --all
       cd -
   fi
-} > /dev/null 2>&1
+} 2>&1 > /dev/null

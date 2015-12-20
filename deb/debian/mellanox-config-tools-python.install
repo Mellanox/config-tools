@@ -1,3 +1,4 @@
+opt/mellanox/src/python/README.md opt/mellanox/src/python
 opt/mellanox/src/python/mellanoxconfig-setup.py opt/mellanox/src/python
 opt/mellanox/src/python/mellanoxconfig/__init__.py opt/mellanox/src/python/mellanoxconfig
 opt/mellanox/src/python/mellanoxconfig/tools.py opt/mellanox/src/python/mellanoxconfig

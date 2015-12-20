@@ -1,0 +1,4 @@
+opt/mellanox/src/puppet
+opt/mellanox/src/puppet/mellanoxconfig
+opt/mellanox/src/puppet/mellanoxconfig/lib/puppet/parser/functions
+

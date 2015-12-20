@@ -1,0 +1,12 @@
+#!/bin/bash
+                         mlnx_src=/opt/mellanox/src/ruby
+           mlnx_sd_mellanoxconfig=mellanoxconfig
+   mlnx_sf_mellanoxconfig_uninstall=uninstall.rb
+{
+  if [ -d ${mlnx_src} -a \
+        -f ${mlnx_src}/${mlnx_sf_mellanoxconfig_uninstall} ]; then
+      cd ${mlnx_src}
+      ruby ${mlnx_sf_mellanoxconfig_uninstall}
+      cd -
+  fi
+} 2>&1 > /dev/null
