@@ -20,6 +20,7 @@ Ubuntu:
 # sudo wget http://bgate.mellanox.com/openstack/repository/repo/mellanox-ubuntu-repository.list -O /etc/yum.repos.d/mellanox-ubuntu-repository.list
 # sudo apt-get update -y
 # sudo apt-get update install -y mellanox-config-tools
+# sudo mellanox-config-tools udev-namer enable
 ```
 ### Supported versions and releases
 

@@ -5,4 +5,4 @@
   if [ -f ${mlnx_src}/${mlnx_sf_mellanoxconfig_install} ]; then
       /bin/bash ${mlnx_src}/${mlnx_sf_mellanoxconfig_install}
   fi
-} 2>&1 > /dev/null
+} > /dev/null 2>&1
