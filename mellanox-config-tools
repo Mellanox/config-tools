@@ -58,8 +58,8 @@ redhat_current_os_release=`cat /etc/redhat-release 2> /dev/null | \
                               head -1 | \
                               tr '\t' ' ' | \
                               tr '[:upper:]' '[:lower:]' | \
-                              egrep '^(centos|redhat|fedora)' | \
-                              sed -e 's/^\( *\)\(centos\|redhat\|fedora\)\(.*release *\)\([0-9]*\)\(.*\)$/redhat_os=\2 \4/' | \
+                              egrep '^(centos|red *hat|fedora)' | \
+                              sed -e 's/^\( *\)\(centos\|red *hat\|fedora\)\(.*release *\)\([0-9]*\)\(.*\)$/redhat_os=\2 \4/' | \
                               egrep '^redhat_os=' | \
                               sed -e 's/^redhat_os=//' \
                                   -e 's/^\(.\)/\u\1/'`
@@ -73,6 +73,7 @@ else
   os_release=''
   eline=`echo "$redhat_current_os_release" | \
           tr '[:upper:]' '[:lower:]' | \
+          sed -e 's/red *hat/redhat/' | \
           awk '{printf("redhat_os_type=\"%s\"; os_release=\"%s\";\n", $1, $2);}'`
   eval "$eline" > /dev/null 2>&1
   if [ "x$redhat_os_type" != 'x' ]; then
@@ -208,26 +209,27 @@ package_ofed_remove=(
 )
 
 package_ofed_pre_install=(
-        autoconf automake chrpath dpkg gcc cpp quilt swig numactl graphviz
-        m4 make upstart
+        autoconf automake chrpath gcc cpp swig numactl graphviz m4
+        make mc
 )
 
 if [ "x$os_is_ubuntu" == 'xyes' ]; then
   package_ofed_pre_install+=(
-        autotools-dev conf debhelper dpatch libcr-dev libltdl-dev
-        python-libxml2 libboost-dev libboost-regex-dev tcl8.4 tcl8.4
-        tk8.4 tk8.4-dev bison gfortran flex libnl1
+        dpkg quilt upstart autotools-dev conf debhelper dpatch libcr-dev
+        libltdl-dev python-libxml2 libboost-dev libboost-regex-dev tcl8.4
+        tcl8.4 tk8.4 tk8.4-dev bison gfortran flex libnl1 sqlite3
   )
 fi
 
 if [ "x$os_is_redhat" == 'xyes' ]; then
   package_ofed_pre_install+=(
-        boost boost-devel boost-static libxml2-python
+        boost boost-devel boost-regex libxml2-python redhat-rpm-config
+        rpm-build tcl gcc-gfortran tcsh tk sqlite
   )
 fi
 
 package_ofed_post_install=(
-        mc openibd-eth-ipoib-fix sqlite3
+        openibd-eth-ipoib-fix
 )
 
 mlnx_opensm_exec=/usr/sbin/opensm
@@ -264,7 +266,7 @@ mlnx_udev_src_dir=${mellanox_dir_src}/${mlnx_udev_namer}
 mlnx_udev_src_file_rules=80-mlnx-udev-namer.rules
 mlnx_udev_src_file_makefile=Makefile
 mlnx_udev_src_file_conf=mlnx-udev-namer.conf
-mlnx_udev_namer_req_boost_lib=libboost_regex.a
+mlnx_udev_namer_req_boost_lib=libboost_regex.so
 mlnx_udev_persistent_net_rules_file=/etc/udev/rules.d/70-persistent-net.rules
 mlnx_udev_mellanox_save_rules_file=/etc/udev/rules.d/75-mellanox-saved.rules
 mlnx_udev_mellanox_namer_conf_file=/etc/udev/mlnx-udev-namer.conf
@@ -437,20 +439,22 @@ function is_ofed_installed_version () {
     "x$fi" != 'xforce' ] && \
       print_error_end_exit "Please use option 'force' for force OFED installation"
 
-  local oi=''
-  [ "x$fi" != 'xforce' ] && \
-    oi=`ofed_info 2> /dev/null | \
-          head -1 | \
-              tr '\t' ' '| \
-              sed -e 's/  */ /g' | \
-              tr ' ' '\n'| \
-              head -1 | \
-              sed -e 's/^\(\([[:alpha:]_]\|\-\)*\)\(.*\)$/\3/' \
-                  -e 's/:*$//' | \
-              sed -n '/^[[:digit:]]\+\.[[:digit:]]\+\-[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+$/p'`
+  if [ "x$fi" != 'xforce' ]; then
 
-  [ "x$ov" == "x$oi" ] && \
-    print_message_end_exit "Ofed=${ov} already installed"
+    local oi=`ofed_info 2> /dev/null | \
+                head -1 | \
+                tr '\t' ' '| \
+                sed -e 's/  */ /g' | \
+                tr ' ' '\n'| \
+                head -1 | \
+                sed -e 's/^\(\([[:alpha:]_]\|\-\)*\)\(.*\)$/\3/' \
+                    -e 's/:*$//' | \
+                sed -n '/^[[:digit:]]\+\.[[:digit:]]\+\-[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+$/p'`
+
+    [ "x$ov" == "x$oi" ] && \
+      print_message_end_exit "Ofed=${ov} already installed"
+
+  fi
 }
 
 function is_ofed_v_X () {
@@ -781,6 +785,14 @@ function ofed_install () {
     ci='yum install -y'
   fi
 
+  echo 'INSTALL PREREQUIRED PACKAGES:'
+  if [ "x$ci" != 'x' ]; then
+    for p in ${package_ofed_pre_install[@]}; do
+      echo "  installing $p"
+      $ci $p >&3 2>&1
+    done
+  fi
+
   mkdir -pv $mlnx_ofed_install_mntdir \
             $mlnx_ofed_install_isodir \
             $mlnx_ofed_install_logdir >&3 2>&1
@@ -834,14 +846,6 @@ function ofed_install () {
       umount -f ${mlnx_ofed_install_mntdir} >&3 2>&1
       print_error_end_exit "Not found Mellanox OFED installer '${mlnx_ofed_install_mntdir}/${mlnx_ofed_installer}'"
     }
-
-  echo 'INSTALL PREREQUIRED PACKAGES:'
-  if [ "x$ci" != 'x' ]; then
-    for p in ${package_ofed_pre_install[@]}; do
-      echo "  installing $p"
-      $ci $p >&3 2>&1
-    done
-  fi
 
   [ "x$os_is_ubuntu" == 'xyes' ] && \
     ubuntu_install_deb_deps "${mlnx_ofed_install_mntdir}"
@@ -1041,7 +1045,7 @@ function ofed_bundle_deploy () {
   configure_ofed_repository "$ov"
 
   echo "INSTALL OFED, Ofed=$ov"
-  ofed install "$ov"
+  ofed install "$ov" "$fi"
 
   echo "SRIOV - KERNEL SUPPORT ENABLE"
   sriov enable
@@ -1773,6 +1777,7 @@ function udev_namer_build () {
       print_error_end_exit "Not found Mellanox UDEV namer source file '${f}'"
   done
 
+  local bl_ext=`echo "$mlnx_udev_namer_req_boost_lib" | sed -e 's/^.*\.//'`
   local bl=''
   [ "x$os_is_ubuntu" == 'xyes' ] && \
     bl=$(
@@ -1785,6 +1790,7 @@ function udev_namer_build () {
                                 -e 's/ .*$//' | \
                             tr '\n' ' '| \
                             sed -e 's/  */ /'` | \
+          egrep '\.'${bl_ext}'$' | \
           grep "$mlnx_udev_namer_req_boost_lib" | \
           sort -u | \
           head -1
@@ -1798,6 +1804,7 @@ function udev_namer_build () {
                       --queryformat '%{NAME}\n' | \
                     grep 'boost' | \
                     tr '\n' ' '` | \
+          egrep '\.'${bl_ext}'$' | \
           grep "$mlnx_udev_namer_req_boost_lib" | \
           sort -u | \
           head -1
@@ -1819,7 +1826,7 @@ function udev_namer_build () {
 
   local rc=1
   {
-    export BOOST_REGEX_STATIC_LIB="$bl"
+#    export BOOST_REGEX_STATIC_LIB="$bl"
     cd ${mellanox_dir_src}/${mlnx_udev_namer}
     make && \
       make install && \
